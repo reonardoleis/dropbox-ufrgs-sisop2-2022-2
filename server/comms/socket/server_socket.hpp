@@ -8,7 +8,7 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "../../../types/packet.hpp"
+#include "../../../commons/types/packet.hpp"
 
 #define HEADER_SIZE sizeof(packet) - sizeof(char*)
 #define BUFFER_SIZE HEADER_SIZE + 256

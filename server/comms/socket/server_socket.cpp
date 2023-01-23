@@ -6,9 +6,11 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "../../../types/packet.hpp"
+#include "../../../commons/types/packet.hpp"
 #include "server_socket.hpp"
 #include <cerrno>
+#include "../../../commons/logger/logger.hpp"
+
 #undef sock_errno
 #define sock_errno() errno
 
@@ -16,7 +18,7 @@
 Socket::Socket(int port, int queue_size) {
     this->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) 
-        printf("ERROR opening socket");
+        logger::error("error opening socket", __FILE__);
 
     this->queue_size = queue_size;
     if (queue_size < 0) {
@@ -55,20 +57,20 @@ Socket::Socket(int sockfd) {
 
 int Socket::bind_and_listen() {
     if (bind(this->sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
-		printf("ERROR on binding\n");
+		logger::error("error on binding", __FILE__);
     return listen(this->sockfd, this->queue_size);
 }
 
 Socket Socket::accept_connection() {
-    printf("waiting for connection...\n");
+    logger::log("waiting for connection...");
 
     this->clilen = sizeof(struct sockaddr_in);
     int newsockfd = accept(this->sockfd, (struct sockaddr *) &cli_addr, &(this->clilen));
     if (newsockfd < 0) 
-        printf("ERROR on accept\n");
+        logger::error("error on accept", __FILE__);
         return newsockfd;
     
-    printf("connection accepted\n");
+    logger::log("connection accepted");
     bzero(buffer, BUFFER_SIZE);
 
     return Socket(newsockfd);
@@ -77,8 +79,10 @@ Socket Socket::accept_connection() {
 
 int Socket::read_packet() {
     int n = read(this->sockfd, this->buffer, BUFFER_SIZE);
-    if (n < 0) 
-        printf("\n\nERROR reading from socket %s\n\n", strerror(sock_errno()));
+    if (n != 0) {
+        const char* err = strcat("error reading from socket ", strerror(sock_errno()));
+        logger::error(err, __FILE__);
+    }
 
     printf("read %d bytes\n", n);
     return n;

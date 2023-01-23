@@ -6,9 +6,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
-#include "../types/packet.hpp"
+#include "../commons/types/packet.hpp"
 
-#define PORT 8087
+#define MASTER_SOCKET_PORT 8081
 
 int main(int argc, char *argv[])
 {
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
         printf("ERROR opening socket\n");
     
 	serv_addr.sin_family = AF_INET;     
-	serv_addr.sin_port = htons(PORT);    
+	serv_addr.sin_port = htons(MASTER_SOCKET_PORT);    
 	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
 	bzero(&(serv_addr.sin_zero), 8);     
 	
