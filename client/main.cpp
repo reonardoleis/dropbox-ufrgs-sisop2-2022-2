@@ -8,10 +8,14 @@
 #include <netdb.h> 
 #include "../types/packet.hpp"
 
-#define PORT 8087
 
 int main(int argc, char *argv[])
 {
+    int port = 8080;
+    if (argc >= 3) {
+        port = atoi(argv[2]);
+    }
+
     int sockfd, n;
     struct sockaddr_in serv_addr;
     struct hostent *server;
@@ -32,7 +36,7 @@ int main(int argc, char *argv[])
         printf("ERROR opening socket\n");
     
 	serv_addr.sin_family = AF_INET;     
-	serv_addr.sin_port = htons(PORT);    
+	serv_addr.sin_port = htons(port);    
 	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
 	bzero(&(serv_addr.sin_zero), 8);     
 	
@@ -48,8 +52,10 @@ int main(int argc, char *argv[])
   p.type = 1;
   p.seqn = 1;
   p.total_size = 1;
-  p._payload = (char*)malloc(256);
-  p.length = 256;
+  p.length = strlen(buffer);
+  printf("p.length = %d", p.length);
+  p._payload = (char*)malloc(p.length);
+  
 
   int header_size = sizeof(packet) - sizeof(char*);
   memcpy(p._payload, buffer, strlen(buffer) * sizeof(char));
@@ -74,6 +80,6 @@ int main(int argc, char *argv[])
     
 	close(sockfd);
 
-  free(p._payload);
+  
     return 0;
 }

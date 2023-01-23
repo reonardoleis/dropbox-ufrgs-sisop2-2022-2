@@ -11,12 +11,11 @@
 #include "../../../types/packet.hpp"
 
 #define HEADER_SIZE sizeof(packet) - sizeof(char*)
-#define BUFFER_SIZE HEADER_SIZE + 256
-
 
 class Socket {
     private:
-        char buffer[BUFFER_SIZE];
+        char buffer[HEADER_SIZE];
+        
 
     public:
         int sockfd, n;
@@ -29,8 +28,8 @@ class Socket {
         int queue_size;
         Socket(int port, int queue_size);
         Socket(int sockfd);
-        int read_packet();
-        int write_packet(packet p);
+        packet read_packet();
+        int write_packet(packet *p);
         int bind_and_listen();
         void close_connection();
         packet get_buffer();
