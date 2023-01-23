@@ -8,7 +8,7 @@
 #include <netdb.h> 
 #include "../types/packet.hpp"
 
-#define PORT 8087
+#define PORT 8081
 
 int main(int argc, char *argv[])
 {
