@@ -1,20 +1,13 @@
-#include <cstdio>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include "../../../types/packet.hpp"
 #include "server_socket.hpp"
 #include <cerrno>
+#include <iostream>
 #undef sock_errno
 #define sock_errno() errno
 
 // master socket
-Socket::Socket(int port, int queue_size)
+ServerSocket::ServerSocket(int port, int queue_size)
 {
+    std::signal(SocketError::CONNECT_ERROR, ServerSocket::error_handler);
     this->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
         printf("ERROR opening socket");
@@ -52,14 +45,14 @@ Socket::Socket(int port, int queue_size)
 }
 
 // slave socket
-Socket::Socket(int sockfd)
+ServerSocket::ServerSocket(int sockfd)
 {
     this->sockfd = sockfd;
     this->queue_size = 1;
     bzero(buffer, HEADER_SIZE);
 }
 
-int Socket::bind_and_listen()
+int ServerSocket::bind_and_listen()
 {
     int bind_result = bind(this->sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     if (bind_result < 0)
@@ -71,73 +64,26 @@ int Socket::bind_and_listen()
     return listen(this->sockfd, this->queue_size);
 }
 
-Socket Socket::accept_connection()
+ServerSocket ServerSocket::accept_connection()
 {
     printf("waiting for connection...\n");
 
     this->clilen = sizeof(struct sockaddr_in);
     int newsockfd = accept(this->sockfd, (struct sockaddr *)&cli_addr, &(this->clilen));
     if (newsockfd < 0)
+    {
         printf("ERROR on accept\n");
-    return newsockfd;
+        std::raise(SocketError::CONNECT_ERROR);
+    }
 
     printf("connection accepted\n");
     bzero(buffer, HEADER_SIZE);
 
-    return Socket(newsockfd);
+    return ServerSocket(newsockfd);
 }
 
-packet Socket::read_packet()
+void ServerSocket::error_handler(int signal)
 {
-    int n = 0;
-
-    while(n < HEADER_SIZE) {
-        n += read(this->sockfd, this->buffer + n, HEADER_SIZE - n);
-    }
-
-    packet p;
-
-    memcpy((char *)&p, this->buffer, HEADER_SIZE);
-
-    p._payload = (char *)malloc(p.length);
-
-    n = 0;
-    while(n < p.length) {
-       n += read(this->sockfd, p._payload + n, p.length - n); 
-    }
-
-    return p;
-}
-
-int Socket::write_packet(packet *p)
-{
-    char *packet_bytes = (char *)malloc(HEADER_SIZE + p->length);
-    memcpy(packet_bytes, (char *)&p, HEADER_SIZE);
-    memcpy(packet_bytes + HEADER_SIZE, (char *)p->_payload, p->length);
-
-    int n = write(this->sockfd, packet_bytes, sizeof(packet_bytes));
-
-    if (n < 0)
-        printf("ERROR writing to socket\n");
-
-    printf("wrote %d bytes\n", n);
-    return n;
-}
-
-void Socket::close_connection()
-{
-    close(this->sockfd);
-}
-
-packet Socket::get_buffer()
-{
-    packet p;
-
-    memcpy((char *)&p, this->buffer, HEADER_SIZE);
-
-    p._payload = (char *)malloc(p.length);
-
-    memcpy((char *)p._payload, this->buffer + HEADER_SIZE, p.length);
-
-    return p;
+    std::cout << "Error found: " << signal << std::endl;
+    exit(signal);
 }
