@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../socket/server_socket.hpp"
-
 class Router {
     public:
         ServerSocket *server_socket;

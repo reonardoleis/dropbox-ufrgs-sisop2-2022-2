@@ -16,6 +16,11 @@ int Router::start()
     }
 
     Manager manager;
+    pthread_t manager_thread_id = 0;
+    pthread_create(&manager_thread_id, NULL, Manager::manage, (void *)&manager);
+    printf("manage dispatched");
+    
+
     bool routing = true;
     while (routing)
     {
@@ -26,6 +31,8 @@ int Router::start()
         case packet_type::LOGIN_REQ:
         {
             std::string username = std::string(p._payload);
+
+            manager.lock.lock();
             int is_new_user = manager.add_user(username);
             if (manager.add_connection(username, slave_socket) < 0)
             {
@@ -34,6 +41,7 @@ int Router::start()
                 slave_socket.write_packet(&p);
                 break;
             }
+            manager.lock.unlock();
 
             if (is_new_user < 0)
                 printf("new connection accepted for user %s", username.c_str());
@@ -53,6 +61,10 @@ int Router::start()
             break;
         }
 
-        manager.manage();
+        
     }
+   
+    pthread_join(manager_thread_id, NULL);
+
+    return 0;
 }
