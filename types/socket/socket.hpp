@@ -26,4 +26,6 @@ class Socket {
         packet read_packet();
         int write_packet(packet *p);
         void close_connection();
+        //virtual int connect_to_server();
+        packet build_packet(uint16_t type, uint16_t seqn, uint32_t total_size, const char* payload);
 };

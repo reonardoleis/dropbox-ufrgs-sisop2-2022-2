@@ -44,10 +44,10 @@ packet Socket::read_packet()
 int Socket::write_packet(packet *p)
 {
     char *packet_bytes = (char *)malloc(HEADER_SIZE + p->length);
-    memcpy(packet_bytes, (char *)&p, HEADER_SIZE);
+    memcpy(packet_bytes, (char *)p, HEADER_SIZE);
     memcpy(packet_bytes + HEADER_SIZE, (char *)p->_payload, p->length);
 
-    int n = write(this->sockfd, packet_bytes, strlen(packet_bytes));
+    int n = write(this->sockfd, packet_bytes, HEADER_SIZE + p->length);
 
     if (n != HEADER_SIZE + p->length)
         std::raise(SocketError::WRITE_ERROR);
@@ -59,4 +59,18 @@ int Socket::write_packet(packet *p)
 void Socket::close_connection()
 {
     close(this->sockfd);
+    this->sockfd = 0;
+}
+
+packet Socket::build_packet(uint16_t type, uint16_t seqn, uint32_t total_size, const char* payload)
+{
+    packet p;
+    p.type = type;
+    p.seqn = seqn;
+    p.total_size = total_size;
+    p.length = strlen(payload);
+    p._payload = (char *)malloc(p.length);
+    memcpy(p._payload, payload, p.length);
+
+    return p;
 }

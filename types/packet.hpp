@@ -4,8 +4,23 @@
 #include <stdint.h>
 
 enum packet_type:short {
-    sync_dir_req,
-    sync_dir_resp
+    LOGIN_REQ, //
+    LOGIN_ACCEPT_RESP, //
+    LOGIN_REFUSE_RESP, //
+    SYNC_DIR_REQ,
+    SYNC_DIR_RESP,
+    UPLOAD_REQ,
+    UPLOAD_RESP,
+    DOWNLOAD_REQ,
+    DOWNLOAD_RESP,
+    DELETE_REQ,
+    DELETE_RESP,
+    LIST_REQ,
+    LIST_RESP,
+    LOGOUT_REQ, //
+    LOGOUT_RESP, //
+    STOP_SERVER_REQ, //
+    STOP_SERVER_BROADCAST
 };
 
 typedef struct packet{

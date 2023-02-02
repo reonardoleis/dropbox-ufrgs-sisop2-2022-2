@@ -2,9 +2,9 @@
 #include <iostream>
 #include <netdb.h> 
 
-ClientSocket::ClientSocket(char* server_address, int server_port)
+ClientSocket::ClientSocket(const char* server_address, int server_port)
 {
-    bzero(buffer, HEADER_SIZE);
+    bzero(this->buffer, HEADER_SIZE);
     if ((this->sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
         std::raise(SocketError::BIND_ERROR);
 
@@ -23,6 +23,8 @@ int ClientSocket::connect_to_server()
     if (err < 0) {
         std::raise(SocketError::CONNECT_ERROR);
     }
+
+    return 0;
 }
 
 void ClientSocket::error_handler(int signal)
