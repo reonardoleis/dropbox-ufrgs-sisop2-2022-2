@@ -4,18 +4,19 @@
 #include "../../../commons/user/user.hpp"
 #include <vector>
 #include <mutex>
+#include "../../../commons/file_manager/file_manager.hpp"
+#include "../controllers/sync_controller.hpp"
+#include "../../../commons/ui/cli_types.hpp"
+
 
 #define MAX_CONNECTIONS_PER_USER 2
-
-typedef struct handle_connection_input {
-    Socket *connection;
-    std::string username;
-} handle_connection_input;
+#define SYNC_DIRS_BASE_PATH "./sync_directories"
 
 class Manager {
     private:
         std::map<std::string, User> users;
         std::vector<pthread_t> active_connections_threads;
+        FileManager server_file_manager;
 
     public:
         int add_user(std::string username);
@@ -26,4 +27,11 @@ class Manager {
         static void * manage(void *manager);
         static void * handle_connection(void *input);
         std::mutex lock;
+        Manager();
 };
+
+typedef struct handle_connection_input {
+    Socket *connection;
+    std::string username;
+    Manager *manager;
+} handle_connection_input;

@@ -8,19 +8,16 @@
 using namespace std;
 int main(int argc, char *argv[])
 {
+    cli_info info;
     int port = 8080;
     if (argc >= 2)
     {
         port = atoi(argv[1]);
     }
-    cli_info info; info.set(std::string("test info"));
-    cli_error error; info.set(std::string("test error"));
-    cli_warning warning; info.set(std::string("test warning"));
 
+    info.stamp(); info.set(std::string("server starting on port: ") + std::to_string(port));
     info.print(std::cout);    
-    warning.print(std::cout); 
-    error.print(std::cout); 
-    cout << "starting server on port " << port << "\n";
+   
 
     ServerSocket master_socket = ServerSocket(port, MASTER_SOCKET_QUEUE_SIZE);
 

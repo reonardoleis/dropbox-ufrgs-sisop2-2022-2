@@ -8,7 +8,8 @@ enum packet_type:short {
     LOGIN_ACCEPT_RESP, //
     LOGIN_REFUSE_RESP, //
     SYNC_DIR_REQ,
-    SYNC_DIR_RESP,
+    SYNC_DIR_ACCEPT_RESP,
+    SYNC_DIR_REFUSE_RESP,
     UPLOAD_REQ,
     UPLOAD_RESP,
     DOWNLOAD_REQ,

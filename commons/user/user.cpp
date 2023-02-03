@@ -10,6 +10,10 @@ User::User(std::string username, int max_connections)
 {
     this->username = username;
     this->connections = new Socket[max_connections];
+    for (int i = 0; i < max_connections; i++)
+    {
+        this->connections[i].sockfd = 0;
+    }
     this->max_connections = max_connections;
 }
 

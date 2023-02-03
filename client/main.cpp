@@ -10,10 +10,10 @@
 #include <netdb.h>
 #include "../commons/packet.hpp"
 #include "./comms/socket/client_socket.hpp"
+#include "../commons/file_manager/file_manager.hpp"
 
 int main(int argc, char *argv[])
 {
-  
   int port = 8080;
   if (argc >= 3)
   {
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
   if (buffer.compare("stop") == 0) {
     package_type = packet_type::STOP_SERVER_REQ;
   }
-  
+
 
   packet p = client_soc.build_packet(package_type, 0, 1, buffer.c_str());
   client_soc.write_packet(&p);
@@ -50,8 +50,13 @@ int main(int argc, char *argv[])
   getline(std::cin, buffer);
 
   
+  package_type = 0;
+  if (buffer.compare("sync_dir") == 0) {
+    package_type = packet_type::SYNC_DIR_REQ;
+  }
+  
 
-  packet p2 = client_soc.build_packet(0, 0, 1, buffer.c_str());
+  packet p2 = client_soc.build_packet(package_type, 0, 1, buffer.c_str());
   client_soc.write_packet(&p2);
   
   packet response2 = client_soc.read_packet();

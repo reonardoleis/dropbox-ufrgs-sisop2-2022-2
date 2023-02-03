@@ -1,6 +1,11 @@
 #include "manager.hpp"
 #include <pthread.h>
 
+Manager::Manager() {
+    this->server_file_manager = FileManager();
+    std::string base_path = SYNC_DIRS_BASE_PATH;
+    this->server_file_manager.set_base_path(base_path);
+}
 
 int Manager::add_user(std::string username)
 {
@@ -78,6 +83,7 @@ void* Manager::manage(void * manager)
                 handle_connection_input *input = new handle_connection_input;
                 input->connection = &connections[i];
                 input->username = user.first;
+                input->manager = m;
 
                 m->lock.lock();
                 pthread_create(&thread_id, NULL, Manager::handle_connection, (void *)input);
@@ -104,6 +110,12 @@ void * Manager::handle_connection(void *input)
     std::string username = in->username;
 
     packet p = connection->read_packet();
+    cli_info info; 
+    info.stamp(); 
+    char message[3];
+    std::sprintf(message, "%d", p.type);
+    info.set("new packet received on Manager::handle_connection (" + std::string(message) + ")");
+    info.print(std::cout);
     switch (p.type)
     {
     case packet_type::LOGOUT_REQ:
@@ -113,6 +125,32 @@ void * Manager::handle_connection(void *input)
         connection->close_connection();
 
         printf("user %s has logged out\n", username.c_str());
+    }
+    case packet_type::SYNC_DIR_REQ:
+    {
+        cli_info info; cli_error error;
+        SyncController sync_controller = SyncController(in->manager->server_file_manager);
+        int err = sync_controller.sync_dir(username);
+
+        uint16_t packet_type = 0;
+        char *message = NULL;
+        if (err < 0) {
+            error.stamp();
+            error.set("error syncing directory for user " + username);
+            error.print(std::cout);
+            packet_type = packet_type::SYNC_DIR_REFUSE_RESP;
+            message = "error syncing directory";
+        } else {
+            info.stamp();
+            info.set("successfully synced directory for user " + username);
+            info.print(std::cout);
+            packet_type = packet_type::SYNC_DIR_ACCEPT_RESP;
+            message = "successfully synced directory";
+        }
+
+        packet p = connection->build_packet(packet_type, 0, 0, message);
+        connection->write_packet(&p);
+        break;
     }
     }
 }
