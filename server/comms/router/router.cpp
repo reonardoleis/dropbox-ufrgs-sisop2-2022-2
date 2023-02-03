@@ -1,7 +1,7 @@
 #include "router.hpp"
 #include <iostream>
 #include "../manager/manager.hpp"
-#include "../../../types/packet.hpp"
+#include "../../../commons/packet.hpp"
 
 Router::Router(ServerSocket *server_socket)
 {

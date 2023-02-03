@@ -1,5 +1,5 @@
-SERVER_FILES := $(shell find ./server ./types -type f -iregex ".*\.cpp")
-CLIENT_FILES := $(shell find ./client ./types -type f -iregex ".*\.cpp")
+SERVER_FILES := $(shell find ./server ./commons -type f -iregex ".*\.cpp")
+CLIENT_FILES := $(shell find ./client ./commons -type f -iregex ".*\.cpp")
 
 build-server:
 	g++ $(SERVER_FILES) -o ./server/bin/server

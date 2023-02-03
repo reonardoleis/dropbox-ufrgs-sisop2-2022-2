@@ -8,7 +8,7 @@
 #include <netinet/in.h>
 #include <iostream>
 #include <netdb.h>
-#include "../types/packet.hpp"
+#include "../commons/packet.hpp"
 #include "./comms/socket/client_socket.hpp"
 
 int main(int argc, char *argv[])

@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../types/socket/socket.hpp"
+#include "../../../commons/socket/socket.hpp"
 
 
 class ServerSocket : public Socket {
