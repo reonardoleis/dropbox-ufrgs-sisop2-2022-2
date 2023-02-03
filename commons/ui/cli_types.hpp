@@ -10,7 +10,7 @@ class cli_logger
     private:
         std::string datestamp;
         std::string message;
-        std::ostream *stream;
+        std::ostream& stream;
         bool stamped;
     public:
         cli_logger set(std::string message);
@@ -19,7 +19,7 @@ class cli_logger
         cli_logger info();
         cli_logger warning();
         cli_logger error();
-        cli_logger(std::ostream *stream);
-        cli_logger();
+        cli_logger(std::ostream& _stream): stream(_stream) {};
+        cli_logger(): stream(std::cout) {};
 };
 

@@ -1,15 +1,8 @@
 #include "cli_types.hpp"
 
 
-cli_logger::cli_logger()
-{
-    this->stream = &std::cout;
-
-}
-
-cli_logger::cli_logger(std::ostream *stream)
-{
-    this->stream = stream;
+cli_logger::cli_logger() {
+    this->stream = std::ostream(std::cout.rdbuf());
 }
 
 cli_logger cli_logger::set(std::string message)
@@ -43,14 +36,14 @@ cli_logger cli_logger::info()
 {
     char buffer[256];
     std::snprintf(buffer, 256, "\x1B[34m%sINFO:\033[0m %s", this->datestamp.c_str(), this->message.c_str());
-    *(this->stream) << buffer << std::endl;
+    (this->stream) << buffer << std::endl;
 }
 
 cli_logger cli_logger::warning()
 {
     char buffer[256];
     std::snprintf(buffer, 256, "\x1B[33m%sWARNING:\033[0m %s", this->datestamp.c_str(), this->message.c_str());
-    *(this->stream) << buffer << std::endl;
+    (this->stream) << buffer << std::endl;
     return *this;
 }
 
@@ -58,6 +51,6 @@ cli_logger cli_logger::error()
 {
     char buffer[256];
     std::snprintf(buffer, 256, "\x1B[31m%sERROR:\033[0m %s", this->datestamp.c_str(), this->message.c_str());
-    *(this->stream) << buffer << std::endl;
+    (this->stream) << buffer << std::endl;
     return *this;
 }

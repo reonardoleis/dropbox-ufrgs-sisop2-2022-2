@@ -110,12 +110,9 @@ void * Manager::handle_connection(void *input)
     std::string username = in->username;
 
     packet p = connection->read_packet();
-    cli_info info; 
-    info.stamp(); 
-    char message[3];
-    std::sprintf(message, "%d", p.type);
-    info.set("new packet received on Manager::handle_connection (" + std::string(message) + ")");
-    info.print(std::cout);
+    cli_logger logger = cli_logger(std::cout); 
+  
+    logger.set("new packet received on Manager::handle_connection (" + std::to_string(p.type) + ")").stamp().info();
     switch (p.type)
     {
     case packet_type::LOGOUT_REQ:
@@ -128,22 +125,18 @@ void * Manager::handle_connection(void *input)
     }
     case packet_type::SYNC_DIR_REQ:
     {
-        cli_info info; cli_error error;
+        cli_logger logger = cli_logger(std::cout);
         SyncController sync_controller = SyncController(in->manager->server_file_manager);
         int err = sync_controller.sync_dir(username);
 
         uint16_t packet_type = 0;
         char *message = NULL;
         if (err < 0) {
-            error.stamp();
-            error.set("error syncing directory for user " + username);
-            error.print(std::cout);
+            logger.stamp().set("error syncing directory for user " + username).error();
             packet_type = packet_type::SYNC_DIR_REFUSE_RESP;
             message = "error syncing directory";
         } else {
-            info.stamp();
-            info.set("successfully synced directory for user " + username);
-            info.print(std::cout);
+            logger.stamp().set("successfully created directory for user " + username).info();
             packet_type = packet_type::SYNC_DIR_ACCEPT_RESP;
             message = "successfully synced directory";
         }

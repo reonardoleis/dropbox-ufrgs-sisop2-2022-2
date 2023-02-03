@@ -1,5 +1,10 @@
 #include "ui_template.hpp"
 
+ui_template::ui_template()
+{
+    this->refresh_size();
+}
+
 int ui_template::run_ui()
 {
     while(true)
@@ -7,8 +12,8 @@ int ui_template::run_ui()
         this->refresh_size();
         this->clear();
         this->mov_cursor(0, 0);
-        this->frame_stream << this->log_stream << this->console_stream;
-        std::cout << this->frame_stream;
+        this->frame_stream << this->log_stream.rdbuf() << this->console_stream.rdbuf();
+        std::cout << this->frame_stream.rdbuf();
         this->frame_stream.clear();
         sleep(200);
     }
@@ -54,5 +59,20 @@ void * ui_template::thread_ready(void* ui)
 {
     ((ui_template *)ui)->run_ui();
     return NULL;
+}
+
+void ui_template::clear()
+{
+    this->frame_stream << "\033[2J";
+}
+
+std::stringstream& ui_template::get_log_stream()
+{
+    return this->log_stream;
+}
+
+std::stringstream& ui_template::get_console_stream()
+{
+    return this->console_stream;
 }
 
