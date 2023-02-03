@@ -1,23 +1,49 @@
 #include "ui_template.hpp"
 
+ui_template frontend;
+
 ui_template::ui_template()
 {
     this->refresh_size();
 }
 
-int ui_template::run_ui()
+void ui_template::run_ui()
 {
-    while(true)
+    pthread_mutex_lock(&(this->stop_lock));
+    this->should_stop = false;
+    pthread_mutex_unlock(&(this->stop_lock));
+    this->clear();
+    while(!should_stop || should_update)
     {
+        pthread_mutex_lock(&(this->stop_lock));
+
         this->refresh_size();
-        this->clear();
         this->mov_cursor(0, 0);
-        this->frame_stream << this->log_stream.rdbuf() << this->console_stream.rdbuf();
-        std::cout << this->frame_stream.rdbuf();
-        this->frame_stream.clear();
-        sleep(200);
+        if(should_update)
+        {
+            pthread_mutex_lock(&(this->write_lock));
+            this->should_update = false;
+
+            this->frame_stream << this->log_stream.str() << this->console_stream.str();
+            this->log_stream.clear();
+            this->console_stream.clear();
+
+            pthread_mutex_unlock(&(this->write_lock));
+            std::cout << this->frame_stream.str();
+        }
+         
+        pthread_mutex_unlock(&(this->stop_lock));
+        sleep(1);
     }
 }
+
+void ui_template::stop_ui()
+{
+    pthread_mutex_lock(&(this->stop_lock));
+    this->should_stop = true;
+    pthread_mutex_unlock(&(this->stop_lock));
+}
+
 
 int ui_template::mov_cursor(unsigned int lin, unsigned int col)
 {
@@ -74,5 +100,16 @@ std::stringstream& ui_template::get_log_stream()
 std::stringstream& ui_template::get_console_stream()
 {
     return this->console_stream;
+}
+
+void ui_template::hold_write_lock()
+{
+    pthread_mutex_lock(&(this->write_lock));
+}
+
+void ui_template::release_write_lock()
+{
+    pthread_mutex_unlock(&(this->write_lock));
+    this->should_update = true;
 }
 

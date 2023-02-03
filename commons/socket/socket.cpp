@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -43,6 +44,7 @@ packet Socket::read_packet()
 
 int Socket::write_packet(packet *p)
 {
+    cli_logger logger = cli_logger(frontend.get_log_stream());
     char *packet_bytes = (char *)malloc(HEADER_SIZE + p->length);
     memcpy(packet_bytes, (char *)p, HEADER_SIZE);
     memcpy(packet_bytes + HEADER_SIZE, (char *)p->_payload, p->length);
@@ -52,7 +54,7 @@ int Socket::write_packet(packet *p)
     if (n != HEADER_SIZE + p->length)
         std::raise(SocketError::WRITE_ERROR);
 
-    printf("wrote %d bytes\n", n);
+    logger.set("Sent packet of " + std::to_string(n) + " bytes").stamp().info();
     return n;
 }
 

@@ -11,6 +11,8 @@
 #include <csignal>
 #include "../packet.hpp"
 #include "../errors/errors.hpp"
+#include "../ui/cli_types.hpp"
+#include "../ui/ui_template.hpp"
 
 #define HEADER_SIZE sizeof(packet) - sizeof(char*)
 
@@ -26,6 +28,5 @@ class Socket {
         packet read_packet();
         int write_packet(packet *p);
         void close_connection();
-        //virtual int connect_to_server();
         packet build_packet(uint16_t type, uint16_t seqn, uint32_t total_size, const char* payload);
 };

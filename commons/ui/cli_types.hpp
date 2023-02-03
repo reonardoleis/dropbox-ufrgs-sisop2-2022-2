@@ -4,6 +4,7 @@
 #include <ctime>
 #include <iostream>
 #include <fstream>
+#include "ui_template.hpp"
 
 class cli_logger
 {
@@ -19,7 +20,6 @@ class cli_logger
         cli_logger info();
         cli_logger warning();
         cli_logger error();
-        cli_logger(std::ostream& _stream): stream(_stream) {};
-        cli_logger(): stream(std::cout) {};
+        cli_logger(std::ostream& outstream = std::cout): stream(outstream) {};
 };
 

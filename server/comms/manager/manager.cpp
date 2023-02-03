@@ -110,7 +110,7 @@ void * Manager::handle_connection(void *input)
     std::string username = in->username;
 
     packet p = connection->read_packet();
-    cli_logger logger = cli_logger(std::cout); 
+    cli_logger logger = cli_logger(frontend.get_log_stream()); 
   
     logger.set("new packet received on Manager::handle_connection (" + std::to_string(p.type) + ")").stamp().info();
     switch (p.type)
@@ -121,11 +121,11 @@ void * Manager::handle_connection(void *input)
         connection->write_packet(&p);
         connection->close_connection();
 
-        printf("user %s has logged out\n", username.c_str());
+        logger.set("user %s has logged out\n" + username).stamp().info();
     }
     case packet_type::SYNC_DIR_REQ:
     {
-        cli_logger logger = cli_logger(std::cout);
+        
         SyncController sync_controller = SyncController(in->manager->server_file_manager);
         int err = sync_controller.sync_dir(username);
 

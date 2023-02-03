@@ -69,6 +69,7 @@
         "semaphore": "cpp",
         "stop_token": "cpp",
         "valarray": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "optional": "cpp"
     }
 }

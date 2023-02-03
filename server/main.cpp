@@ -9,8 +9,7 @@
 using namespace std;
 int main(int argc, char *argv[])
 {
-    ui_template _ui_template;
-    cli_logger logger = cli_logger();
+    cli_logger logger = cli_logger(frontend.get_log_stream());
     int port = 8080;
     if (argc >= 2)
     {
@@ -18,8 +17,8 @@ int main(int argc, char *argv[])
     }
 
     
-   // pthread_t ui_thread_id = 0;
-   // pthread_create(&ui_thread_id, NULL, _ui_template.thread_ready, &_ui_template);
+    pthread_t ui_thread_id = 0;
+    pthread_create(&ui_thread_id, NULL, ui_template::thread_ready, &frontend);
     logger.set("Starting server on port: " + to_string(port)).stamp().info();
    
 
@@ -31,7 +30,8 @@ int main(int argc, char *argv[])
  
 
     master_socket.close_connection();
-
-    //pthread_join(ui_thread_id, NULL);
+    logger.set("Closing server...").stamp().info();
+    frontend.stop_ui();
+    pthread_join(ui_thread_id, NULL);
     return 0;
 }

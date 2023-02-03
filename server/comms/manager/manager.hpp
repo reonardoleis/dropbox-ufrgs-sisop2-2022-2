@@ -7,6 +7,7 @@
 #include "../../../commons/file_manager/file_manager.hpp"
 #include "../controllers/sync_controller.hpp"
 #include "../../../commons/ui/cli_types.hpp"
+#include "../../../commons/ui/ui_template.hpp"
 
 
 #define MAX_CONNECTIONS_PER_USER 2

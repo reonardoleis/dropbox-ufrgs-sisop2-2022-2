@@ -7,10 +7,11 @@
 // master socket
 ServerSocket::ServerSocket(int port, int queue_size)
 {
+    cli_logger logger = cli_logger(frontend.get_log_stream());
     std::signal(SocketError::CONNECT_ERROR, ServerSocket::error_handler);
     this->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
-        printf("ERROR opening socket");
+        logger.set("Could not open socket").stamp().error();
 
     this->queue_size = queue_size;
     if (queue_size < 0)
@@ -54,10 +55,11 @@ ServerSocket::ServerSocket(int sockfd)
 
 int ServerSocket::bind_and_listen()
 {
+    cli_logger logger = cli_logger(frontend.get_log_stream());
     int bind_result = bind(this->sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     if (bind_result < 0)
     {
-        printf("ERROR on binding\n");
+        logger.set("Failed to bind socket").stamp().error();
         return bind_result;
     }
 
@@ -66,17 +68,18 @@ int ServerSocket::bind_and_listen()
 
 ServerSocket ServerSocket::accept_connection()
 {
-    printf("waiting for connection...\n");
+    cli_logger logger = cli_logger(frontend.get_log_stream());
+    logger.set("waiting for connection...").stamp().info();
 
     this->clilen = sizeof(struct sockaddr_in);
     int newsockfd = accept(this->sockfd, (struct sockaddr *)&cli_addr, &(this->clilen));
     if (newsockfd < 0)
     {
-        printf("ERROR on accept\n");
+        logger.set("Failed to accept connection").stamp().error();
         std::raise(SocketError::CONNECT_ERROR);
     }
 
-    printf("connection accepted\n");
+    logger.set("Connection accepted").stamp().info();
     bzero(buffer, HEADER_SIZE);
 
     return ServerSocket(newsockfd);
@@ -84,6 +87,7 @@ ServerSocket ServerSocket::accept_connection()
 
 void ServerSocket::error_handler(int signal)
 {
-    std::cout << "Error found: " << signal << std::endl;
+    cli_logger logger = cli_logger(frontend.get_log_stream());
+    logger.set("Exiting due to error: " + signal).stamp().error();
     exit(signal);
 }
