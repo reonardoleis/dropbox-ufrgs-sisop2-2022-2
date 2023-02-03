@@ -5,33 +5,21 @@
 #include <iostream>
 #include <fstream>
 
-class cli_message
+class cli_logger
 {
-    protected:
+    private:
         std::string datestamp;
         std::string message;
+        std::ostream *stream;
         bool stamped;
     public:
-        void set(std::string message);
-        void stamp();
+        cli_logger set(std::string message);
+        cli_logger stamp();
         int log(std::ofstream &file);
-        virtual void print(std::ostream &out);
+        cli_logger info();
+        cli_logger warning();
+        cli_logger error();
+        cli_logger(std::ostream *stream);
+        cli_logger();
 };
 
-class cli_info: public cli_message
-{
-    public:
-        void print(std::ostream &out);
-};
-
-class cli_warning: public cli_message
-{
-    public:
-        void print(std::ostream &out);
-};
-
-class cli_error: public cli_message
-{
-    public:
-        void print(std::ostream &out);
-};

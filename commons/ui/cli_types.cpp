@@ -1,11 +1,24 @@
 #include "cli_types.hpp"
 
-void cli_message::set(std::string message)
+
+cli_logger::cli_logger()
 {
-    this->message = message;
+    this->stream = &std::cout;
+
 }
 
-void cli_message::stamp()
+cli_logger::cli_logger(std::ostream *stream)
+{
+    this->stream = stream;
+}
+
+cli_logger cli_logger::set(std::string message)
+{
+    this->message = message;
+    return *this;
+}
+
+cli_logger cli_logger::stamp()
 {
     time_t epoch = (time_t)time(NULL);
     struct tm *local = localtime(&epoch);
@@ -13,10 +26,11 @@ void cli_message::stamp()
     char buffer[26];
     strftime(buffer, 28, "[%Y-%m-%d %H:%M:%S] ", local);
     this->datestamp = std::string(buffer);
-    this->stamped = true;
+
+    return *this;
 }
 
-int cli_message::log(std::ofstream &file)
+int cli_logger::log(std::ofstream &file)
 {
     if (!file.is_open())
         return -1;
@@ -24,28 +38,26 @@ int cli_message::log(std::ofstream &file)
     file << this->datestamp << this->message << std::endl;
 }
 
-void cli_message::print(std::ostream &out)
-{
-    out << "not implemented" << std::endl;
-}
 
-void cli_info::print(std::ostream &out)
+cli_logger cli_logger::info()
 {
     char buffer[256];
     std::snprintf(buffer, 256, "\x1B[34m%sINFO:\033[0m %s", this->datestamp.c_str(), this->message.c_str());
-    out << buffer << std::endl;
+    *(this->stream) << buffer << std::endl;
 }
 
-void cli_warning::print(std::ostream &out)
+cli_logger cli_logger::warning()
 {
     char buffer[256];
     std::snprintf(buffer, 256, "\x1B[33m%sWARNING:\033[0m %s", this->datestamp.c_str(), this->message.c_str());
-    out << buffer << std::endl;
+    *(this->stream) << buffer << std::endl;
+    return *this;
 }
 
-void cli_error::print(std::ostream &out)
+cli_logger cli_logger::error()
 {
     char buffer[256];
     std::snprintf(buffer, 256, "\x1B[31m%sERROR:\033[0m %s", this->datestamp.c_str(), this->message.c_str());
-    out << buffer << std::endl;
+    *(this->stream) << buffer << std::endl;
+    return *this;
 }
