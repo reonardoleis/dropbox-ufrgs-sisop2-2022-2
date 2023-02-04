@@ -6,6 +6,7 @@
 #include <mutex>
 #include "../../../commons/file_manager/file_manager.hpp"
 #include "../controllers/sync_controller.hpp"
+#include "../controllers/upload_controller.hpp"
 #include "../../../commons/ui/cli_types.hpp"
 #include "../../../commons/ui/ui_template.hpp"
 
@@ -27,8 +28,11 @@ class Manager {
         int broadcast(packet *p);
         static void * manage(void *manager);
         static void * handle_connection(void *input);
-        std::mutex lock;
+        pthread_mutex_t lock;
         Manager();
+        Manager(bool *is_router_routing);
+        void close_all_connections();
+        bool *is_router_routing;
 };
 
 typedef struct handle_connection_input {

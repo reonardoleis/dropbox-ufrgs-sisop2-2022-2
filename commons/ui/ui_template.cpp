@@ -33,7 +33,7 @@ void ui_template::run_ui()
         }
          
         pthread_mutex_unlock(&(this->stop_lock));
-        sleep(1);
+        usleep(100);
     }
 }
 

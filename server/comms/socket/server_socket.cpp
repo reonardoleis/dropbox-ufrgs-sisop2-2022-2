@@ -6,7 +6,8 @@
 
 // master socket
 ServerSocket::ServerSocket(int port, int queue_size)
-{
+{   
+    this->is_waiting = false;
     cli_logger logger = cli_logger(frontend.get_log_stream());
     std::signal(SocketError::CONNECT_ERROR, ServerSocket::error_handler);
     this->sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -91,3 +92,4 @@ void ServerSocket::error_handler(int signal)
     logger.set("Exiting due to error: " + signal).stamp().error();
     exit(signal);
 }
+

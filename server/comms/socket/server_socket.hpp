@@ -5,7 +5,6 @@
 
 
 class ServerSocket : public Socket {
-
     public:
         int queue_size;
         socklen_t clilen;
@@ -15,5 +14,4 @@ class ServerSocket : public Socket {
         int bind_and_listen();
         ServerSocket accept_connection();
         static void error_handler(int signal);
-
 };

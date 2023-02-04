@@ -13,6 +13,21 @@
 #undef sock_errno
 #define sock_errno() errno
 
+Socket::Socket() {
+    this->sockfd = 0;
+    this->port = 0;
+    this->is_waiting = false;
+    this->is_waiting_lock = new std::mutex();
+}
+
+Socket::Socket(Socket &s)
+{
+    this->sockfd = s.sockfd;
+    this->port = s.port;
+    this->is_waiting = s.is_waiting;
+    this->is_waiting_lock = new std::mutex();
+}
+
 packet Socket::read_packet()
 {
     int n = 0;
@@ -75,4 +90,30 @@ packet Socket::build_packet(uint16_t type, uint16_t seqn, uint32_t total_size, c
     memcpy(p._payload, payload, p.length);
 
     return p;
+}
+
+bool Socket::get_is_waiting()
+{
+    //cli_logger logger = cli_logger(frontend.get_log_stream());
+    //logger.set("Started getting is_waiting").stamp().error();
+    bool is_waiting;
+    this->is_waiting_lock->lock();
+    //pthread_mutex_lock(&(this->is_waiting_lock));
+    is_waiting = this->is_waiting;
+    //pthread_mutex_unlock(&(this->is_waiting_lock));
+    this->is_waiting_lock->unlock();
+    //logger.set("Stopped getting is_waiting").stamp().error();
+    return is_waiting;
+}
+
+void Socket::set_is_waiting(bool is_waiting)
+{   
+    //cli_logger logger = cli_logger(frontend.get_log_stream());
+    //logger.set("Started Setting is_waiting to " + std::to_string(is_waiting)).stamp().error();
+    //pthread_mutex_lock(&(this->is_waiting_lock));
+    this->is_waiting_lock->lock();
+    this->is_waiting = is_waiting;
+    //pthread_mutex_unlock(&(this->is_waiting_lock));
+    this->is_waiting_lock->unlock();
+    //logger.set("Stopped Setting is_waiting to " + std::to_string(is_waiting)).stamp().error();
 }

@@ -4,6 +4,7 @@
 
 ClientSocket::ClientSocket(const char* server_address, int server_port)
 {
+    this->is_waiting = false;
     bzero(this->buffer, HEADER_SIZE);
     if ((this->sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
         std::raise(SocketError::BIND_ERROR);

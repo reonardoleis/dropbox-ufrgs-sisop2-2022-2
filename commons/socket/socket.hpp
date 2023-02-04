@@ -13,18 +13,23 @@
 #include "../errors/errors.hpp"
 #include "../ui/cli_types.hpp"
 #include "../ui/ui_template.hpp"
+#include <mutex>
 
 #define HEADER_SIZE sizeof(packet) - sizeof(char*)
 
 class Socket {
     protected:
         char buffer[HEADER_SIZE];
-        
+        bool is_waiting;
 
     public:
+        Socket();
+        Socket(Socket &s);
+        std::mutex *is_waiting_lock;
         int sockfd;
         int port;
-
+        bool get_is_waiting();
+        void set_is_waiting(bool is_waiting);
         packet read_packet();
         int write_packet(packet *p);
         void close_connection();
