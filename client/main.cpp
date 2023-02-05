@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <iostream>
 #include <netdb.h>
+#include <pwd.h>
 #include "../commons/packet.hpp"
 #include "./comms/socket/client_socket.hpp"
 #include "../commons/file_manager/file_manager.hpp"
@@ -24,7 +25,9 @@ int main(int argc, char *argv[])
   std::string username;
   std::string server_address_str;
   std::string command, arg;
-  std::string base_path = "~/.dropboxUFRGS";
+  struct passwd *pw = getpwuid(getuid());
+  const char *homedir = pw->pw_dir;
+  std::string base_path = std::string(homedir) + "/.dropboxUFRGS";
   std::string sync_dir = "/sync_dir";
   FileManager file_manager;
   bool running = true, download=false, remote = false;
@@ -62,7 +65,10 @@ int main(int argc, char *argv[])
 
     if (command.compare("get_sync_dir") == 0) {
       package_type = packet_type::SYNC_DIR_REQ;
-      file_manager.create_directory(sync_dir);
+      if(file_manager.create_directory(sync_dir) < 0)
+      {
+        printf("Failed to create local sync_dir\n");
+      }
     }
 
     if (command.compare("stop") == 0) {
@@ -104,7 +110,7 @@ int main(int argc, char *argv[])
       std::string path = base_path + sync_dir;
       if(file_manager.list_directory(path, out) == -1)
       {
-        printf("Failed to list directory");
+        printf("Failed to list directory\n");
       }
       else
       {
