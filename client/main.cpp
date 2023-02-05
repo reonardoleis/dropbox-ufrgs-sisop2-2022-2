@@ -96,6 +96,16 @@ int main(int argc, char *argv[])
     
     packet response = client_soc.read_packet();
     printf("Received: %s\n", response._payload);
+    if (buffer.compare("download") == 0)
+    {
+      serialized_file_t sf3 = File::from_data(response._payload);
+      File write_file(sf3);
+      std::string path = "./sync_dir";
+      if(write_file.write_file(path) < 0)
+      {
+        printf("erro\n");
+      }
+    }
   }
   
   sleep(10);

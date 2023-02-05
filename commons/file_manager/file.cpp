@@ -38,6 +38,7 @@ int File::read_file() {
 
 int File::write_file(std::string &path) {
     std::string write_path = path + "/" + this->filename;
+    printf("csminho: %s\n", write_path.c_str());
     cli_logger logger = cli_logger(frontend.get_log_stream());
     logger.set("writing file to " + write_path).stamp().warning();
     std::fstream file_stream = std::fstream(write_path, std::ios::out | std::ios::binary);
@@ -90,9 +91,6 @@ serialized_file_t File::from_data(const char * data) {
     file.data = new char[file.file_size];
     memcpy((char *) file.filename, data + sizeof(int), 256); // copy filename
     memcpy((char *) file.data, data + sizeof(int) + 256, file.file_size); // copy data
-
-    std::string _data = file.data;
-    std::string filesize = std::to_string(file.file_size);
  
 
     return file;
