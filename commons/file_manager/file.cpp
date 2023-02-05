@@ -13,8 +13,10 @@ File::File(serialized_file_t file)
     this->deserialize(file);
 }
 
-int File::read_file() {
-    std::fstream file_stream = std::fstream(this->filename, std::ios::in | std::ios::binary);
+
+int File::read_file(std::string &path) {
+    std::string read_path = path + "/" + this->filename;
+    std::fstream file_stream = std::fstream(read_path, std::ios::in | std::ios::binary);
     if (!file_stream.is_open())
     {
         return -1;
@@ -38,7 +40,6 @@ int File::read_file() {
 
 int File::write_file(std::string &path) {
     std::string write_path = path + "/" + this->filename;
-    printf("csminho: %s\n", write_path.c_str());
     cli_logger logger = cli_logger(frontend.get_log_stream());
     logger.set("writing file to " + write_path).stamp().warning();
     std::fstream file_stream = std::fstream(write_path, std::ios::out | std::ios::binary);
@@ -71,13 +72,24 @@ void File::deserialize(serialized_file_t file) {
 }
 
 char * File::to_data() {
+    cli_logger logger = cli_logger(frontend.get_log_stream());
+    logger.set(std::to_string((long)this)).stamp().error();
+ 
     serialized_file_t serialized_file = this->serialize();
+ 
+  
     char * data = new char[this->file_size + sizeof(int) + 256];
+  
+    
     bzero(data, this->file_size + sizeof(int) + 256);
-    printf("filesize %d\n", serialized_file.file_size);
+   
+  
     memcpy(data, (char *) &serialized_file.file_size, sizeof(int));
+   
     memcpy(data + sizeof(int), (char *) serialized_file.filename, 256);
+
     memcpy(data + sizeof(int) + 256, (char *) serialized_file.data, this->file_size);
+ 
 
     return data;
 }
@@ -91,6 +103,9 @@ serialized_file_t File::from_data(const char * data) {
     file.data = new char[file.file_size];
     memcpy((char *) file.filename, data + sizeof(int), 256); // copy filename
     memcpy((char *) file.data, data + sizeof(int) + 256, file.file_size); // copy data
+
+    std::string _data = file.data;
+    std::string filesize = std::to_string(file.file_size);
  
 
     return file;
