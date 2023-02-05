@@ -29,7 +29,7 @@ class Manager {
         int broadcast(packet *p);
         static void * manage(void *manager);
         static void * handle_connection(void *input);
-        pthread_mutex_t lock;
+        std::mutex lock;
         Manager();
         Manager(bool *is_router_routing);
         void close_all_connections();

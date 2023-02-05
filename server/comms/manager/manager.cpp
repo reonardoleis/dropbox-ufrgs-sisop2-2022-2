@@ -105,13 +105,11 @@ void *Manager::manage(void *manager)
                         input->connection = &connections[i];
                         input->username = user.first;
                         input->manager = m;
-                        logger.set("Manager lock").stamp().warning();
-                        pthread_mutex_lock(&(m->lock));
+                        m->lock.lock();
                         connections[i].set_is_waiting(true);
                         pthread_create(&thread_id, NULL, Manager::handle_connection, (void *)input);
                         m->active_connections_threads.push_back(thread_id);
-                        pthread_mutex_unlock(&(m->lock));
-                        logger.set("Manager unlock").stamp().warning();
+                        m->lock.unlock();
                     }
                 }
             }
@@ -228,16 +226,16 @@ void *Manager::handle_connection(void *input)
 
         File *file;
         int err = download_controller.download(&file, filename, username);
-        std::string message = "";
+        char* message = "";
         int p_type = 0;
-        int size = 0;
+        uint32_t size = 0;
 
         if (err < 0)
         {
             logger.set("error downloading file for user " + username).stamp().error();
             p_type = packet_type::DOWNLOAD_REFUSE_RESP;
-            message = "error downloading file";
-            size = message.length();
+            message = "Error downloading file";
+            size = strlen(message);
         }
         else
         {
@@ -246,11 +244,13 @@ void *Manager::handle_connection(void *input)
             p_type = packet_type::DOWNLOAD_ACCEPT_RESP;
 
             message = file->to_data();
-            size = file->file_size;
+            size = file->get_payload_size();
         }
-
-        packet p = connection->build_packet_sized(p_type, 0, 0, size, message.c_str());
+        logger.set(std::to_string(size)).error();
+        sleep(5);
+        packet p = connection->build_packet_sized(p_type, 0, 0, size, message);
         connection->write_packet(&p);
+        
         break;
     }
     case packet_type::LIST_REQ:
@@ -287,6 +287,7 @@ void *Manager::handle_connection(void *input)
     }
 
     connection->set_is_waiting(false);
+    return NULL;
 }
 
 void Manager::close_all_connections()

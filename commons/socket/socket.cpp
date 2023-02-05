@@ -92,7 +92,7 @@ packet Socket::build_packet(uint16_t type, uint16_t seqn, uint32_t total_size, c
     return p;
 }
 
-packet Socket::build_packet_sized(uint16_t type, uint16_t seqn, uint32_t total_size, int payload_size, const char* payload)
+packet Socket::build_packet_sized(uint16_t type, uint16_t seqn, uint32_t total_size, uint32_t payload_size, const char* payload)
 {
     packet p;
     p.type = type;

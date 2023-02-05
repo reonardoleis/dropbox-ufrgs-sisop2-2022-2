@@ -72,8 +72,8 @@ void File::deserialize(serialized_file_t file) {
 }
 
 char * File::to_data() {
-    cli_logger logger = cli_logger(frontend.get_log_stream());
-    logger.set(std::to_string((long)this)).stamp().error();
+    //cli_logger logger = cli_logger(frontend.get_log_stream());
+    //logger.set(std::to_string((long)this)).stamp().error();
  
     serialized_file_t serialized_file = this->serialize();
  
@@ -91,6 +91,7 @@ char * File::to_data() {
     memcpy(data + sizeof(int) + 256, (char *) serialized_file.data, this->file_size);
  
 
+    
     return data;
 }
 

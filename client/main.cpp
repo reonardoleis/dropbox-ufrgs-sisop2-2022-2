@@ -59,8 +59,11 @@ int main(int argc, char *argv[])
     const char * buf = "";
 
     getline(std::cin, command);
-    arg = command.substr(command.find(" "));
-    command = command.substr(0, command.find(" "));
+    int command_delim = command.find(" ");
+    arg = command.substr(command_delim+1, command.length() - command_delim);
+    command = command.substr(0, command_delim);
+    printf("command: %s | arg: %s\n", command.c_str(), arg.c_str());
+
 
     remote = true;
 
@@ -74,6 +77,7 @@ int main(int argc, char *argv[])
 
     if (command.compare("stop") == 0) {
       package_type = packet_type::STOP_SERVER_REQ;
+      running = false;
     }
 
     if (command.compare("exit") == 0) {
@@ -95,7 +99,8 @@ int main(int argc, char *argv[])
     if (command.compare("download") == 0) {
       package_type = packet_type::DOWNLOAD_REQ;
       buf = arg.c_str();
-      size = strlen(buf);
+      size = arg.length();
+      printf("size: %d\n", size);
       download = true;
     }
 
@@ -126,23 +131,26 @@ int main(int argc, char *argv[])
       packet p2 = client_soc.build_packet_sized(package_type, 0, 1, size, buf);
       client_soc.write_packet(&p2);
       packet response = client_soc.read_packet();
-      printf("Received: %s\n", response._payload);
-    }
-    
-
-
-    
-    if (download)
-    {
-      download = false;
-      serialized_file_t sf = File::from_data(response._payload);
-      File write_file(sf);
-      std::string path = base_path + sync_dir;
-      if(write_file.write_file(path) < 0)
+      if(!download)
       {
-        printf("Failed writing recieved file\n");
+        printf("Received: %s\n", response._payload);
+      }
+      else
+      {
+        download = false;
+        serialized_file_t sf = File::from_data(response._payload);
+        File write_file(sf);
+        printf("Recieved: %s\n", write_file.filename.c_str());
+        std::string path = base_path + sync_dir;
+        if(write_file.write_file(path) < 0)
+        {
+          printf("Failed writing recieved file\n");
+        }
       }
     }
+    
+
+
   }
   
   sleep(1);
