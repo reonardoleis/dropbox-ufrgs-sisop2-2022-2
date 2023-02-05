@@ -24,7 +24,7 @@ class Socket {
 
     public:
         Socket();
-        Socket(Socket &s);
+        Socket(const Socket &s);
         std::mutex *is_waiting_lock;
         int sockfd;
         int port;

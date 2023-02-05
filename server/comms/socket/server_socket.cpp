@@ -54,6 +54,14 @@ ServerSocket::ServerSocket(int sockfd)
     bzero(buffer, HEADER_SIZE);
 }
 
+ServerSocket::ServerSocket(const ServerSocket &s)
+{
+    this->sockfd = s.sockfd;
+    this->port = s.port;
+    this->is_waiting = s.is_waiting;
+    this->is_waiting_lock = new std::mutex();
+}
+
 int ServerSocket::bind_and_listen()
 {
     cli_logger logger = cli_logger(frontend.get_log_stream());

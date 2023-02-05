@@ -20,7 +20,7 @@ Socket::Socket() {
     this->is_waiting_lock = new std::mutex();
 }
 
-Socket::Socket(Socket &s)
+Socket::Socket(const Socket &s)
 {
     this->sockfd = s.sockfd;
     this->port = s.port;
