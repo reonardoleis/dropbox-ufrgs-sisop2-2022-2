@@ -15,3 +15,28 @@ void FileManager::set_base_path(std::string &path)
 {
     this->base_path = path;
 }
+
+int FileManager::list_directory(std::string &path, std::string &out)
+{
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir (path.c_str())) != NULL) {
+        while ((ent = readdir (dir)) != NULL) {
+            if (ent->d_type == DT_REG) {
+                out += std::string(ent->d_name) + ""; 
+                // get creation time
+                // get last modified time
+                out += " "; 
+                
+                if (ent->d_name != NULL) {
+                    out += ", ";
+                }
+            }
+        }
+        closedir (dir);
+    } else {
+        return -1;
+    }
+
+    return 0;
+} 

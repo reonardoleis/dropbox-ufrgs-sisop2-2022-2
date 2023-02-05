@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include <sys/types.h>
+#include <dirent.h>
 
 class FileManager {
     private:
@@ -7,5 +9,6 @@ class FileManager {
     public:
         FileManager();
         void set_base_path(std::string &path);
-        int create_directory(std::string &path);
+        int  create_directory(std::string &path);
+        int  list_directory(std::string &path, std::string &out);
 };

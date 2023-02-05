@@ -85,7 +85,7 @@ void *Manager::manage(void *manager)
     printf("Managing connections...\n");
     while (*(m->is_router_routing))
     {
-        
+
         for (auto user : m->users)
         {
 
@@ -184,21 +184,21 @@ void *Manager::handle_connection(void *input)
 
         usleep(100);
         in->manager->close_all_connections();
-       
+
         break;
     }
     case packet_type::UPLOAD_REQ:
     {
-        UploadController upload_controller = UploadController();  
+        UploadController upload_controller = UploadController();
         cli_logger logger = cli_logger(frontend.get_log_stream());
         logger.set("uploading file for user " + username).stamp().info();
         serialized_file_t serialized_file = File::from_data(p._payload);
- 
+
         File file = File("");
         file.deserialize(serialized_file);
         logger.set("file " + file.filename + " received").stamp().info();
         int err = upload_controller.upload(file, username);
-        char * message = "";
+        char *message = "";
         int p_type = 0;
         if (err < 0)
         {
@@ -222,20 +222,16 @@ void *Manager::handle_connection(void *input)
         DownloadController download_controller = DownloadController();
         cli_logger logger = cli_logger(frontend.get_log_stream());
 
-        
         char *filename = p._payload;
         std::string filename_str = filename;
         logger.set("downloading " + filename_str + " for user " + username).stamp().info();
 
         File *file;
         int err = download_controller.download(&file, filename, username);
-        char * message = "";
+        char *message = "";
         int p_type = 0;
         int size = 0;
 
-      
-        std::string foo = "Size " + std::to_string(file->file_size); 
-        logger.set(foo).stamp().error();
         if (err < 0)
         {
             logger.set("error downloading file for user " + username).stamp().error();
@@ -246,18 +242,48 @@ void *Manager::handle_connection(void *input)
         else
         {
             logger.set("successfully downloaded file for user " + username).stamp().info();
-           
+
             p_type = packet_type::DOWNLOAD_ACCEPT_RESP;
-            
-            
-            message =file->to_data();
+
+            message = file->to_data();
             size = file->file_size;
         }
 
         packet p = connection->build_packet_sized(p_type, 0, 0, size, message);
         connection->write_packet(&p);
         break;
-    }   
+    }
+    case packet_type::LIST_REQ:
+    {
+        SyncController sync_controller = SyncController(in->manager->server_file_manager);
+        cli_logger logger = cli_logger(frontend.get_log_stream());
+        logger.set("listing files for user " + username).stamp().info();
+       
+        std::string files = "";
+        int err = sync_controller.list_sync_dir(username, files);
+        char *message = "";
+        int p_type = 0;
+        int size = 0;
+
+        if (err < 0)
+        {
+            logger.set("error listing files for user " + username).stamp().error();
+            p_type = packet_type::LIST_REFUSE_RESP;
+            message = "error listing files";
+            size = strlen(message);
+        }
+        else
+        {
+            logger.set("successfully listed files for user " + username).stamp().info();
+            p_type = packet_type::LIST_ACCEPT_RESP;
+            message = (char *)files.c_str();
+            size = files.length();
+        }
+
+        packet p = connection->build_packet_sized(p_type, 0, 0, size, message);
+        connection->write_packet(&p);
+        break;
+    }
     }
 
     connection->set_is_waiting(false);

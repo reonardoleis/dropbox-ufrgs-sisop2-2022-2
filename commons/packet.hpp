@@ -19,7 +19,8 @@ enum packet_type:short {
     DELETE_REQ,
     DELETE_RESP,
     LIST_REQ,
-    LIST_RESP,
+    LIST_ACCEPT_RESP,
+    LIST_REFUSE_RESP,
     LOGOUT_REQ, //
     LOGOUT_RESP, //
     STOP_SERVER_REQ, //

@@ -8,4 +8,6 @@ class SyncController {
     public:
         SyncController(FileManager server_file_manager);
         int sync_dir(std::string &path);
+        int list_sync_dir(std::string &username, std::string &out);
+        std::string get_sync_dir(std::string &username);
 };
