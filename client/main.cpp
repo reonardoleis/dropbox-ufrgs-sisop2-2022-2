@@ -25,8 +25,7 @@ int main(int argc, char *argv[])
   {
     server_address_str = argv[1];
   }
-
-  ClientSocket client_soc = ClientSocket(server_address_str.c_str(), port);
+  ClientSocket client_soc(server_address_str.c_str(), port);
   client_soc.connect_to_server();
 
   printf("Enter your username: ");
@@ -41,7 +40,7 @@ int main(int argc, char *argv[])
 
   while (true) {
     uint16_t package_type = 0;
-    File to_upload = File("test.txt");
+    File to_upload = File("9d86137606337c648c7e32dc0564f8ef.png");
     to_upload.read_file();
 
     printf("Enter the command: ");
@@ -73,15 +72,21 @@ int main(int argc, char *argv[])
       
       serialized_file_t sf2 = File::from_data(buf);
       printf("filename: %s\n", sf2.filename);
-      printf("filesize: %d\n", sf2.file_size);
       printf("filedata: %s\n", sf2.data);
 
       size = sizeof(int) + 256 + sf2.file_size;
+      printf("filesize: %d\n", size);
     }
 
-    
+    if (buffer.compare("download") == 0) {
+      package_type = packet_type::DOWNLOAD_REQ;
+      buf = to_upload.filename.c_str();
+      size = strlen(buf);
+    }
 
     packet p2 = client_soc.build_packet_sized(package_type, 0, 1, size, buf);
+    
+
     client_soc.write_packet(&p2);
      if (buffer.compare("stop") == 0) {
       //client_soc.close_connection();
