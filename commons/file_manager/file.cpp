@@ -40,7 +40,7 @@ int File::write_file(std::string &path) {
     {
         return -1;
     }
-
+    
     file_stream.write(this->data, this->file_size);
     file_stream.close();
 
