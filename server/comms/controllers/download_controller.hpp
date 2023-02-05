@@ -4,5 +4,5 @@
 
 class DownloadController {
     public:
-        int download(File * out, std::string filename, std::string username);
+        int download(File ** out, std::string filename, std::string username);
 };

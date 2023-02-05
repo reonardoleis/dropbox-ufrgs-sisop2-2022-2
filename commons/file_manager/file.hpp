@@ -14,7 +14,7 @@ class File {
         File(const std::string& filename);
         char * data;
         std::string filename;
-        int read_file();
+        int read_file(std::string &path);
         int write_file(std::string &path);
         int file_size;
         serialized_file_t serialize();

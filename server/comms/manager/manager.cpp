@@ -228,11 +228,14 @@ void *Manager::handle_connection(void *input)
         logger.set("downloading " + filename_str + " for user " + username).stamp().info();
 
         File *file;
-        int err = download_controller.download(file, filename, username);
+        int err = download_controller.download(&file, filename, username);
         char * message = "";
         int p_type = 0;
         int size = 0;
 
+      
+        std::string foo = "Size " + std::to_string(file->file_size); 
+        logger.set(foo).stamp().error();
         if (err < 0)
         {
             logger.set("error downloading file for user " + username).stamp().error();
@@ -243,12 +246,12 @@ void *Manager::handle_connection(void *input)
         else
         {
             logger.set("successfully downloaded file for user " + username).stamp().info();
-            
+           
             p_type = packet_type::DOWNLOAD_ACCEPT_RESP;
-            char * file_data = file->to_data();
-            sleep(1);
-            message = file_data;
-            size = 0;
+            
+            
+            message =file->to_data();
+            size = file->file_size;
         }
 
         packet p = connection->build_packet_sized(p_type, 0, 0, size, message);
