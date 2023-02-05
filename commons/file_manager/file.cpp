@@ -93,3 +93,7 @@ serialized_file_t File::from_data(const char * data) {
     return file;
 }
 
+
+int File::get_payload_size() {
+    return this->file_size + sizeof(int) + 256;
+}

@@ -216,6 +216,44 @@ void *Manager::handle_connection(void *input)
         connection->write_packet(&p);
         break;
     }
+    case packet_type::DOWNLOAD_REQ:
+    {
+        DownloadController download_controller = DownloadController();
+        cli_logger logger = cli_logger(frontend.get_log_stream());
+
+        
+        char *filename = p._payload;
+        std::string filename_str = filename;
+        logger.set("downloading " + filename_str + " for user " + username).stamp().info();
+
+        File *file;
+        int err = download_controller.download(file, filename, username);
+        char * message = "";
+        int p_type = 0;
+        int size = 0;
+
+        if (err < 0)
+        {
+            logger.set("error downloading file for user " + username).stamp().error();
+            p_type = packet_type::DOWNLOAD_REFUSE_RESP;
+            message = "error downloading file";
+            size = strlen(message);
+        }
+        else
+        {
+            logger.set("successfully downloaded file for user " + username).stamp().info();
+            
+            p_type = packet_type::DOWNLOAD_ACCEPT_RESP;
+            char * file_data = file->to_data();
+            sleep(1);
+            message = file_data;
+            size = 0;
+        }
+
+        packet p = connection->build_packet_sized(p_type, 0, 0, size, message);
+        connection->write_packet(&p);
+        break;
+    }   
     }
 
     connection->set_is_waiting(false);

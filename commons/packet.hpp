@@ -14,7 +14,8 @@ enum packet_type:short {
     UPLOAD_ACCEPT_RESP,
     UPLOAD_REFUSE_RESP,
     DOWNLOAD_REQ,
-    DOWNLOAD_RESP,
+    DOWNLOAD_ACCEPT_RESP,
+    DOWNLOAD_REFUSE_RESP,
     DELETE_REQ,
     DELETE_RESP,
     LIST_REQ,
@@ -29,7 +30,7 @@ typedef struct packet{
  uint16_t type; //Tipo do pacote (p.ex. DATA | CMD)
  uint16_t seqn; //Número de sequência
  uint32_t total_size; //Número total de fragmentos
- uint16_t length; //Comprimento do payload
+ uint32_t length; //Comprimento do payload
  char* _payload = NULL; //Dados do pacote
  ~packet();
 } packet;

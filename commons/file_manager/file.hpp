@@ -1,3 +1,4 @@
+#pragma once
 #include <string>
 #include <string.h>
 
@@ -20,4 +21,5 @@ class File {
         void deserialize(serialized_file_t file); 
         char * to_data();
         static serialized_file_t from_data(const char * data);
+        int get_payload_size();
 };
