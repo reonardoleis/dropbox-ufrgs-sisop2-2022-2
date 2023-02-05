@@ -157,7 +157,7 @@ void *Manager::handle_connection(void *input)
         int err = sync_controller.sync_dir(username);
 
         uint16_t packet_type = 0;
-        char *message = NULL;
+        std::string message = "";
         if (err < 0)
         {
             logger.stamp().set("error syncing directory for user " + username).error();
@@ -171,7 +171,7 @@ void *Manager::handle_connection(void *input)
             message = "successfully synced directory";
         }
 
-        packet p = connection->build_packet(packet_type, 0, 0, message);
+        packet p = connection->build_packet(packet_type, 0, 0, message.c_str());
         connection->write_packet(&p);
         break;
     }
@@ -198,7 +198,7 @@ void *Manager::handle_connection(void *input)
         file.deserialize(serialized_file);
         logger.set("file " + file.filename + " received").stamp().info();
         int err = upload_controller.upload(file, username);
-        char *message = "";
+        std::string message = "";
         int p_type = 0;
         if (err < 0)
         {
@@ -213,7 +213,7 @@ void *Manager::handle_connection(void *input)
             message = "successfully uploaded file";
         }
 
-        packet p = connection->build_packet(p_type, 0, 0, message);
+        packet p = connection->build_packet(p_type, 0, 0, message.c_str());
         connection->write_packet(&p);
         break;
     }
@@ -228,7 +228,7 @@ void *Manager::handle_connection(void *input)
 
         File *file;
         int err = download_controller.download(&file, filename, username);
-        char *message = "";
+        std::string message = "";
         int p_type = 0;
         int size = 0;
 
@@ -237,7 +237,7 @@ void *Manager::handle_connection(void *input)
             logger.set("error downloading file for user " + username).stamp().error();
             p_type = packet_type::DOWNLOAD_REFUSE_RESP;
             message = "error downloading file";
-            size = strlen(message);
+            size = message.length();
         }
         else
         {
@@ -249,7 +249,7 @@ void *Manager::handle_connection(void *input)
             size = file->file_size;
         }
 
-        packet p = connection->build_packet_sized(p_type, 0, 0, size, message);
+        packet p = connection->build_packet_sized(p_type, 0, 0, size, message.c_str());
         connection->write_packet(&p);
         break;
     }
@@ -261,7 +261,7 @@ void *Manager::handle_connection(void *input)
        
         std::string files = "";
         int err = sync_controller.list_sync_dir(username, files);
-        char *message = "";
+        std::string message = "";
         int p_type = 0;
         int size = 0;
 
@@ -270,17 +270,17 @@ void *Manager::handle_connection(void *input)
             logger.set("error listing files for user " + username).stamp().error();
             p_type = packet_type::LIST_REFUSE_RESP;
             message = "error listing files";
-            size = strlen(message);
+            size = message.length();
         }
         else
         {
             logger.set("successfully listed files for user " + username).stamp().info();
             p_type = packet_type::LIST_ACCEPT_RESP;
-            message = (char *)files.c_str();
+            message = files;
             size = files.length();
         }
 
-        packet p = connection->build_packet_sized(p_type, 0, 0, size, message);
+        packet p = connection->build_packet_sized(p_type, 0, 0, size, message.c_str());
         connection->write_packet(&p);
         break;
     }

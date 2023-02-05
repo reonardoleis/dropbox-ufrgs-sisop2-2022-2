@@ -58,8 +58,9 @@ int main(int argc, char *argv[])
     int size = 0;
     const char * buf = "";
 
-    std::cin >> command;
-    std::cin >> arg;
+    getline(std::cin, command);
+    arg = command.substr(command.find(" "));
+    command = command.substr(0, command.find(" "));
 
     remote = true;
 
@@ -84,7 +85,7 @@ int main(int argc, char *argv[])
     if (command.compare("upload") == 0) {
       package_type = packet_type::UPLOAD_REQ;
       int delim = arg.rfind("/");
-      File to_upload = File(arg.substr(delim+1, arg.length()));
+      File to_upload = File(arg.substr(delim+1));
       std::string filepath = arg.substr(0, delim);
       to_upload.read_file(filepath);
       buf = to_upload.to_data();
