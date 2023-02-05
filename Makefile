@@ -16,3 +16,7 @@ run-client:
 	./client/bin/client
 
 test-client: build-client run-client
+
+build:
+	make build-server
+	make build-client

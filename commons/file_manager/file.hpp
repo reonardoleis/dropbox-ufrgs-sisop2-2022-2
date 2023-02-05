@@ -19,5 +19,5 @@ class File {
         serialized_file_t serialize();
         void deserialize(serialized_file_t file); 
         char * to_data();
-        serialized_file_t from_data(char * data);
+        static serialized_file_t from_data(const char * data);
 };

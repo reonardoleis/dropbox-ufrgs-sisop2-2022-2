@@ -92,6 +92,19 @@ packet Socket::build_packet(uint16_t type, uint16_t seqn, uint32_t total_size, c
     return p;
 }
 
+packet Socket::build_packet_sized(uint16_t type, uint16_t seqn, uint32_t total_size, int payload_size, const char* payload)
+{
+    packet p;
+    p.type = type;
+    p.seqn = seqn;
+    p.total_size = total_size;
+    p.length = payload_size;
+    p._payload = (char *)malloc(p.length);
+    memcpy(p._payload, payload, p.length);
+
+    return p;
+}
+
 bool Socket::get_is_waiting()
 {
     //cli_logger logger = cli_logger(frontend.get_log_stream());
@@ -117,3 +130,4 @@ void Socket::set_is_waiting(bool is_waiting)
     this->is_waiting_lock->unlock();
     //logger.set("Stopped Setting is_waiting to " + std::to_string(is_waiting)).stamp().error();
 }
+

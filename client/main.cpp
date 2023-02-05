@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 
     getline(std::cin, buffer);
     const char * buf = buffer.c_str();
-    
+    int size = strlen(buf);
 
     if (buffer.compare("sync_dir") == 0) {
       package_type = packet_type::SYNC_DIR_REQ;
@@ -63,15 +63,25 @@ int main(int argc, char *argv[])
       package_type = packet_type::LOGOUT_REQ;
     }
 
+    
     if (buffer.compare("upload") == 0) {
       package_type = packet_type::UPLOAD_REQ;
       buf = to_upload.to_data();
-      printf("buf: %s\n", buf + sizeof(serialized_file_t) - sizeof(char*)); 
+      printf("buf: %s\n", buf + sizeof(int) + 256); 
+      printf("filename: %s\n", buf + sizeof(int));
+      printf("filesize: %d\n", *(int *)buf);
+      
+      serialized_file_t sf2 = File::from_data(buf);
+      printf("filename: %s\n", sf2.filename);
+      printf("filesize: %d\n", sf2.file_size);
+      printf("filedata: %s\n", sf2.data);
+
+      size = sizeof(int) + 256 + sf2.file_size;
     }
 
     
 
-    packet p2 = client_soc.build_packet(package_type, 0, 1, buf);
+    packet p2 = client_soc.build_packet_sized(package_type, 0, 1, size, buf);
     client_soc.write_packet(&p2);
      if (buffer.compare("stop") == 0) {
       //client_soc.close_connection();

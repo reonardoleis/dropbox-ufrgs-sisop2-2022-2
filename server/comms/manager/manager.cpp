@@ -188,14 +188,15 @@ void *Manager::handle_connection(void *input)
     }
     case packet_type::UPLOAD_REQ:
     {
-        UploadController upload_controller = UploadController();
-        logger.set("ja era" + username).stamp().error();        File file = File("");
-        serialized_file_t serialized_file = file.from_data(p._payload);
-        /*printf("buf: %s\n", p._payload + sizeof(serialized_file_t) - sizeof(char*)); 
+        UploadController upload_controller = UploadController();  
+        cli_logger logger = cli_logger(frontend.get_log_stream());
+        logger.set("uploading file for user " + username).stamp().info();
+        serialized_file_t serialized_file = File::from_data(p._payload);
+ 
+        File file = File("");
         file.deserialize(serialized_file);
-       
-        int err = upload_controller.upload(file, username);*/
-        int err = -1;
+        logger.set("file " + file.filename + " received").stamp().info();
+        int err = upload_controller.upload(file, username);
         char * message = "";
         int p_type = 0;
         if (err < 0)
