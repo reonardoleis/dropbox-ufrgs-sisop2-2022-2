@@ -1,3 +1,4 @@
+#pragma once
 #include <string>
 #include "../../../commons/file_manager/file_manager.hpp"
 
