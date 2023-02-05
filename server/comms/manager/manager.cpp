@@ -105,12 +105,13 @@ void *Manager::manage(void *manager)
                         input->connection = &connections[i];
                         input->username = user.first;
                         input->manager = m;
-
+                        logger.set("Manager lock").stamp().warning();
                         pthread_mutex_lock(&(m->lock));
                         connections[i].set_is_waiting(true);
                         pthread_create(&thread_id, NULL, Manager::handle_connection, (void *)input);
                         m->active_connections_threads.push_back(thread_id);
                         pthread_mutex_unlock(&(m->lock));
+                        logger.set("Manager unlock").stamp().warning();
                     }
                 }
             }

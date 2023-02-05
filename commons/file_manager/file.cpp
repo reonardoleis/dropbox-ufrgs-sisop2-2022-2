@@ -26,6 +26,11 @@ int File::read_file() {
 
     this->data = new char[file_size];
     file_stream.read(this->data, file_size);
+    if(!file_stream.good())
+    {
+        file_stream.close();
+        return -1;
+    }
     file_stream.close();
     this->file_size = file_size;
     return 0;

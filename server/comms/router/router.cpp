@@ -48,9 +48,11 @@ int Router::start()
         {
         case packet_type::LOGIN_REQ:
         {
+            logger.stamp().set("Login request").info();
             std::string username = std::string(p._payload);
 
             pthread_mutex_lock(&(manager.lock));
+            logger.stamp().set("Login request").info();
             int is_new_user = manager.add_user(username);
             if (manager.add_connection(username, slave_socket) < 0)
             {
@@ -61,7 +63,6 @@ int Router::start()
                 break;
             }
             pthread_mutex_unlock(&(manager.lock));
-            ;
 
             if (is_new_user < 0)
                 logger.set("new connection accepted for user " + username).stamp().info();

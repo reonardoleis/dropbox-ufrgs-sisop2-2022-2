@@ -57,6 +57,10 @@ ServerSocket::ServerSocket(int sockfd)
 ServerSocket::ServerSocket(const ServerSocket &s)
 {
     this->sockfd = s.sockfd;
+    this->clilen = s.clilen;
+    this->queue_size = s.queue_size;
+    this->serv_addr = s.serv_addr;
+    this->cli_addr = s.cli_addr;
     this->port = s.port;
     this->is_waiting = s.is_waiting;
     this->is_waiting_lock = new std::mutex();
