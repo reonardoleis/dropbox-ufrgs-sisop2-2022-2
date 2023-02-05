@@ -123,7 +123,7 @@ void *Manager::manage(void *manager)
         pthread_join(m->active_connections_threads[i], NULL);
     }
 
-    return 0;
+    return NULL;
 }
 
 void *Manager::handle_connection(void *input)
