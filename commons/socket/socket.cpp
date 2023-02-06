@@ -85,7 +85,7 @@ packet Socket::build_packet(uint16_t type, uint16_t seqn, uint32_t total_size, c
     p.type = type;
     p.seqn = seqn;
     p.total_size = total_size;
-    p.length = strlen(payload);
+    p.length = strlen(payload) + 1;
     p._payload = (char *)malloc(p.length);
     memcpy(p._payload, payload, p.length);
 
