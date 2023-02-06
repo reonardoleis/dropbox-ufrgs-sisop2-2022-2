@@ -171,7 +171,7 @@ void *Manager::handle_connection(void *input)
                 logger.stamp().set("successfully created directory for user " + username).info();
             }
             packet_type = packet_type::SYNC_DIR_ACCEPT_RESP;
-            message = "successfully synced directory";
+            message = "successfully synced directory\0";
         }
 
         packet p = connection->build_packet(packet_type, 0, 0, message.c_str());
