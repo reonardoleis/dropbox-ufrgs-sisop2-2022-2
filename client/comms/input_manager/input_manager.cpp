@@ -138,7 +138,7 @@ void InputManager::run()
         if (command.compare("download") == 0) {
             _packet_type = packet_type::DOWNLOAD_REQ;
             buf = arg.c_str();
-            size = arg.length();
+            size = arg.length() + 1;
             download = true;
         }
 
@@ -146,13 +146,13 @@ void InputManager::run()
             deleting = true;
             _packet_type = packet_type::DELETE_REQ;
             buf = arg.c_str();
-            size = arg.length();
+            size = arg.length() + 1;
         }
 
         if (command.compare("delete") == 0) {
             _packet_type = packet_type::DELETE_REQ;
             buf = arg.c_str();
-            size = arg.length();
+            size = arg.length() + 1;
             std::string file = base_path + sync_dir + "/" + arg;
             if(remove(file.c_str()) < 0)
             {
