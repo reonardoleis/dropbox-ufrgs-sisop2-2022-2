@@ -16,6 +16,6 @@ int SyncController::list_sync_dir(std::string &username, std::string &out) {
     cli_logger log = cli_logger(frontend.get_log_stream());
 
     log.set("listing directory " + p).stamp().info();
-    sleep(1);
+   
     return this->file_manager.list_directory(p, out);
 }

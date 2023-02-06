@@ -1,5 +1,14 @@
 #include "file_manager.hpp"
 #include <sys/stat.h>
+#include <time.h>
+#include <string.h>
+
+
+void getFileCreationTime(char *path) {
+    struct stat attr;
+    stat(path, &attr);
+    printf("Last modified time: %s", ctime(&attr.st_mtime));
+}
 
 FileManager::FileManager(){}
 
@@ -8,7 +17,8 @@ int FileManager::create_directory(std::string &path)
     mkdir(this->base_path.c_str(), 0777);
 
     std::string full_path = this->base_path + path;
-    return mkdir(full_path.c_str(), 0777);
+    int err = mkdir(full_path.c_str(), 0777);
+    return errno == EEXIST ? 1 : err;
 }
 
 void FileManager::set_base_path(std::string &path)
@@ -20,18 +30,28 @@ int FileManager::list_directory(std::string &path, std::string &out)
 {
     DIR *dir;
     struct dirent *ent;
+    struct stat attr;
+    out += "\n";
+    bool empty = true;
     if ((dir = opendir (path.c_str())) != NULL) {
         while ((ent = readdir (dir)) != NULL) {
             if (ent->d_type == DT_REG) {
-                out += std::string(ent->d_name) + ""; 
-                // get creation time
-                // get last modified time
-                out += " "; 
-                
-                if (ent->d_name != NULL) {
-                    out += ", ";
+                stat(ent->d_name, &attr);
+                if(S_ISREG(attr.st_mode))
+                {
+                    empty = false;
                 }
+                std::string creation = ctime((const time_t *)&attr.st_ctim);
+                std::string modification = ctime((const time_t *)&attr.st_mtim);
+                std::string access = ctime((const time_t *)&attr.st_atim);
+                out += std::string(ent->d_name) + "\n"; 
+                out += "\tCreated  at " + creation + "\tModified at " + modification + "\tAccessed at " + access + "\n";
+                
             }
+        }
+        if(empty)
+        {
+            out = "Empty folder";
         }
         closedir (dir);
     } else {

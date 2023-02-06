@@ -53,7 +53,6 @@ int Router::start()
             std::string username = std::string(p._payload);
 
             manager.lock.lock();
-            logger.stamp().set("Login request").info();
             int is_new_user = manager.add_user(username);
             if (manager.add_connection(username, slave_socket) < 0)
             {

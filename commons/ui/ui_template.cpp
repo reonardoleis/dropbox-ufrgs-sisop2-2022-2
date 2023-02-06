@@ -13,23 +13,27 @@ void ui_template::run_ui()
     this->should_stop = false;
     pthread_mutex_unlock(&(this->stop_lock));
     this->clear();
+    uint pos = 0;
+    this->mov_cursor(0, 0);
     while(!should_stop || should_update)
     {
         pthread_mutex_lock(&(this->stop_lock));
 
         this->refresh_size();
-        this->mov_cursor(0, 0);
         if(should_update)
         {
             pthread_mutex_lock(&(this->write_lock));
             this->should_update = false;
-
             this->frame_stream << this->log_stream.str() << this->console_stream.str();
+            this->log_stream.str(std::string());
             this->log_stream.clear();
+            this->console_stream.str(std::string());
             this->console_stream.clear();
 
             pthread_mutex_unlock(&(this->write_lock));
             std::cout << this->frame_stream.str();
+            this->frame_stream.str(std::string());
+            this->frame_stream.clear();
         }
          
         pthread_mutex_unlock(&(this->stop_lock));

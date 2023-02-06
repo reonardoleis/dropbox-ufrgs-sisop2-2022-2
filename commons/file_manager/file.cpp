@@ -72,8 +72,6 @@ void File::deserialize(serialized_file_t file) {
 }
 
 char * File::to_data() {
-    //cli_logger logger = cli_logger(frontend.get_log_stream());
-    //logger.set(std::to_string((long)this)).stamp().error();
  
     serialized_file_t serialized_file = this->serialize();
  

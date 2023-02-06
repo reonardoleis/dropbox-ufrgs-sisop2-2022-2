@@ -13,18 +13,21 @@ enum packet_type:short {
     UPLOAD_REQ,
     UPLOAD_ACCEPT_RESP,
     UPLOAD_REFUSE_RESP,
+    UPLOAD_BROADCAST,
     DOWNLOAD_REQ,
     DOWNLOAD_ACCEPT_RESP,
     DOWNLOAD_REFUSE_RESP,
     DELETE_REQ,
-    DELETE_RESP,
+    DELETE_ACCEPT_RESP,
+    DELETE_REFUSE_RESP,
     LIST_REQ,
     LIST_ACCEPT_RESP,
     LIST_REFUSE_RESP,
     LOGOUT_REQ, //
     LOGOUT_RESP, //
     STOP_SERVER_REQ, //
-    STOP_SERVER_BROADCAST
+    STOP_SERVER_BROADCAST,
+    UNKNOWN_RESP
 };
 
 typedef struct packet{
@@ -34,6 +37,8 @@ typedef struct packet{
  uint32_t length; //Comprimento do payload
  char* _payload = NULL; //Dados do pacote
  ~packet();
+ packet(const packet &p);
+ packet();
 } packet;
 
 

@@ -11,8 +11,11 @@
 #include <pwd.h>
 #include "../commons/packet.hpp"
 #include "./comms/socket/client_socket.hpp"
+#include "./comms/input_manager/input_manager.hpp"
 #include "../commons/file_manager/file_manager.hpp"
 #include "../commons/file_manager/file.hpp"
+
+
 int main(int argc, char *argv[])
 {
   if (argc < 4)
@@ -30,7 +33,7 @@ int main(int argc, char *argv[])
   std::string base_path = std::string(homedir) + "/.dropboxUFRGS";
   std::string sync_dir = "/sync_dir";
   FileManager file_manager;
-  bool running = true, download=false, remote = false;
+
     
   username = argv[1];
   server_address_str = argv[2];
@@ -47,109 +50,22 @@ int main(int argc, char *argv[])
   packet response = client_soc.read_packet();
   printf("response: %s\n", response._payload);
 
+  InputManager input_manager(&client_soc);
+  pthread_t input_thread_id = 0;
+  pthread_create(&input_thread_id, NULL, InputManager::thread_ready, &input_manager);
 
-  while (running) {
-    uint16_t package_type = 0;
-    std::string path = "./";
-
-    printf("Enter the command: ");
-    command = "";
-    arg = "";
-    int size = 0;
-    const char * buf = "";
-
-    getline(std::cin, command);
-    int command_delim = command.find(" ");
-    arg = command.substr(command_delim+1, command.length() - command_delim);
-    command = command.substr(0, command_delim);
-    printf("command: %s | arg: %s\n", command.c_str(), arg.c_str());
-
-
-    remote = true;
-
-    if (command.compare("get_sync_dir") == 0) {
-      package_type = packet_type::SYNC_DIR_REQ;
-      if(file_manager.create_directory(sync_dir) < 0)
-      {
-        printf("Failed to create local sync_dir\n");
-      }
-    }
-
-    if (command.compare("stop") == 0) {
-      package_type = packet_type::STOP_SERVER_REQ;
-      running = false;
-    }
-
-    if (command.compare("exit") == 0) {
-      package_type = packet_type::LOGOUT_REQ;
-      running = false;
-    }
-
-    
-    if (command.compare("upload") == 0) {
-      package_type = packet_type::UPLOAD_REQ;
-      int delim = arg.rfind("/");
-      File to_upload = File(arg.substr(delim+1));
-      std::string filepath = arg.substr(0, delim);
-      to_upload.read_file(filepath);
-      buf = to_upload.to_data();
-      size = to_upload.get_payload_size();
-    }
-
-    if (command.compare("download") == 0) {
-      package_type = packet_type::DOWNLOAD_REQ;
-      buf = arg.c_str();
-      size = arg.length();
-      printf("size: %d\n", size);
-      download = true;
-    }
-
-    if (command.compare("list_server") == 0) {
-      package_type = packet_type::LIST_REQ;
-      buf = "";
-      size = 1;
-    }
-
-    if (command.compare("list_client") == 0) {
-      remote = false;
-      std::string out;
-      std::string path = base_path + sync_dir;
-      if(file_manager.list_directory(path, out) == -1)
-      {
-        printf("Failed to list directory\n");
-      }
-      else
-      {
-        printf("local: %s", out.c_str());
-      }
-
-
-    }
-
-    if(remote)
+  while (!input_manager.is_done()) {
+    usleep(100);
+    if(input_manager.should_send())
     {
-      packet p2 = client_soc.build_packet_sized(package_type, 0, 1, size, buf);
-      client_soc.write_packet(&p2);
-      packet response = client_soc.read_packet();
-      if(!download)
+      packet p = input_manager.get_packet();
+      printf("type: %d\nlength: %d\nPayload: %s", p.type, p.length, p._payload);
+      client_soc.write_packet(&p);
+      if(input_manager.is_waiting())
       {
-        printf("Received: %s\n", response._payload);
-      }
-      else
-      {
-        download = false;
-        serialized_file_t sf = File::from_data(response._payload);
-        File write_file(sf);
-        printf("Recieved: %s\n", write_file.filename.c_str());
-        std::string path = base_path + sync_dir;
-        if(write_file.write_file(path) < 0)
-        {
-          printf("Failed writing recieved file\n");
-        }
+        input_manager.give_response();
       }
     }
-    
-
 
   }
   
@@ -158,3 +74,4 @@ int main(int argc, char *argv[])
 
   return 0;
 }
+

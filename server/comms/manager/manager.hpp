@@ -8,6 +8,7 @@
 #include "../controllers/sync_controller.hpp"
 #include "../controllers/upload_controller.hpp"
 #include "../controllers/download_controller.hpp"
+#include "../controllers/delete_controller.hpp"
 #include "../../../commons/ui/cli_types.hpp"
 #include "../../../commons/ui/ui_template.hpp"
 

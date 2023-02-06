@@ -107,27 +107,17 @@ packet Socket::build_packet_sized(uint16_t type, uint16_t seqn, uint32_t total_s
 
 bool Socket::get_is_waiting()
 {
-    //cli_logger logger = cli_logger(frontend.get_log_stream());
-    //logger.set("Started getting is_waiting").stamp().error();
     bool is_waiting;
     this->is_waiting_lock->lock();
-    //pthread_mutex_lock(&(this->is_waiting_lock));
     is_waiting = this->is_waiting;
-    //pthread_mutex_unlock(&(this->is_waiting_lock));
     this->is_waiting_lock->unlock();
-    //logger.set("Stopped getting is_waiting").stamp().error();
     return is_waiting;
 }
 
 void Socket::set_is_waiting(bool is_waiting)
 {   
-    //cli_logger logger = cli_logger(frontend.get_log_stream());
-    //logger.set("Started Setting is_waiting to " + std::to_string(is_waiting)).stamp().error();
-    //pthread_mutex_lock(&(this->is_waiting_lock));
     this->is_waiting_lock->lock();
     this->is_waiting = is_waiting;
-    //pthread_mutex_unlock(&(this->is_waiting_lock));
     this->is_waiting_lock->unlock();
-    //logger.set("Stopped Setting is_waiting to " + std::to_string(is_waiting)).stamp().error();
 }
 

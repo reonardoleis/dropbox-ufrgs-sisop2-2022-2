@@ -82,7 +82,6 @@ void *Manager::manage(void *manager)
 {
     Manager *m = (Manager *)manager;
     cli_logger logger = cli_logger(frontend.get_log_stream());
-    printf("Managing connections...\n");
     while (*(m->is_router_routing))
     {
 
@@ -95,7 +94,6 @@ void *Manager::manage(void *manager)
             {
                 if (connections[i].sockfd > 0)
                 {
-                    // logger.set("Checking connection " + std::to_string(connections[i].sockfd)).stamp().info();
                     if (!connections[i].get_is_waiting())
                     {
 
@@ -164,7 +162,14 @@ void *Manager::handle_connection(void *input)
         }
         else
         {
-            logger.stamp().set("successfully created directory for user " + username).info();
+            if(err == 1)
+            {
+                logger.stamp().set("sync_directory for user " + username + "already exists").info();
+            }
+            else
+            {
+                logger.stamp().set("successfully created directory for user " + username).info();
+            }
             packet_type = packet_type::SYNC_DIR_ACCEPT_RESP;
             message = "successfully synced directory";
         }
@@ -246,8 +251,6 @@ void *Manager::handle_connection(void *input)
             message = file->to_data();
             size = file->get_payload_size();
         }
-        logger.set(std::to_string(size)).error();
-        sleep(5);
         packet p = connection->build_packet_sized(p_type, 0, 0, size, message);
         connection->write_packet(&p);
         
@@ -283,6 +286,42 @@ void *Manager::handle_connection(void *input)
         packet p = connection->build_packet_sized(p_type, 0, 0, size, message.c_str());
         connection->write_packet(&p);
         break;
+    }
+    case packet_type::DELETE_REQ:
+    {
+        DeleteController delete_controller = DeleteController();
+        cli_logger logger = cli_logger(frontend.get_log_stream());
+        std::string filename = p._payload;
+        logger.set("Deleting file " + filename + " for user " + username).stamp().info();
+        int err = delete_controller.delete_file(filename, username);
+        
+        std::string message = "";
+        int p_type = 0;
+        int size = 0;
+
+        if (err < 0)
+        {
+            logger.set("error deleting file " + filename + " for user " + username).stamp().error();
+            p_type = packet_type::DELETE_REFUSE_RESP;
+            message = "error deleting file";
+            size = message.length();
+        }
+        else
+        {
+            logger.set("successfully deleted " + filename + " for user " + username).stamp().info();
+            p_type = packet_type::DELETE_ACCEPT_RESP;
+            message = "successfully deleted file";
+            size = message.length();
+        }
+
+        packet p = connection->build_packet_sized(p_type, 0, 0, size, message.c_str());
+        connection->write_packet(&p);
+        break;
+    }
+    default:
+    {
+        packet p = connection->build_packet(packet_type::UNKNOWN_RESP, 0, 0, "Unrecognized packet type");
+        connection->write_packet(&p);
     }
     }
 
