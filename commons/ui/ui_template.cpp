@@ -12,9 +12,10 @@ void ui_template::run_ui()
     pthread_mutex_lock(&(this->stop_lock));
     this->should_stop = false;
     pthread_mutex_unlock(&(this->stop_lock));
-    this->clear();
     uint pos = 0;
     this->mov_cursor(0, 0);
+    int lines = this->get_term_lines()
+    int console_start = lines *0.9;
     while(!should_stop || should_update)
     {
         pthread_mutex_lock(&(this->stop_lock));
@@ -24,7 +25,27 @@ void ui_template::run_ui()
         {
             pthread_mutex_lock(&(this->write_lock));
             this->should_update = false;
-            this->frame_stream << this->log_stream.str() << this->console_stream.str();
+            this->clear();
+            std::string prev_logs;
+            int line_count = 0;
+            while(std::getline(frame_stream, prev_logs)
+            {
+                line_count += 1;
+            }
+            int spacing = line_count - console_start;
+            std::string new_logs;
+            while(std::getline(log_stream, new_logs))
+            {
+                spacing -= 1;
+            }
+            if(line_count < console_start)
+            {
+                //TODO
+            }
+
+            this->frame_stream.str(std::string());
+            this->frame_stream.clear();
+            this->frame_stream << prev_logs << this->log_stream.str() << this->console_stream.str();
             this->log_stream.str(std::string());
             this->log_stream.clear();
             this->console_stream.str(std::string());
@@ -32,8 +53,6 @@ void ui_template::run_ui()
 
             pthread_mutex_unlock(&(this->write_lock));
             std::cout << this->frame_stream.str();
-            this->frame_stream.str(std::string());
-            this->frame_stream.clear();
         }
          
         pthread_mutex_unlock(&(this->stop_lock));
@@ -93,7 +112,7 @@ void * ui_template::thread_ready(void* ui)
 
 void ui_template::clear()
 {
-    this->frame_stream << "\033[2J";
+    std::cout() << "\033[2J";
 }
 
 std::stringstream& ui_template::get_log_stream()
