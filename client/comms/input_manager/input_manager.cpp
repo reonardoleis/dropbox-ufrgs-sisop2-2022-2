@@ -69,7 +69,8 @@ void InputManager::run()
 {
     struct passwd *pw = getpwuid(getuid());
     const char *homedir = pw->pw_dir;
-    std::string base_path = std::string(homedir) + "/.dropboxUFRGS";
+    /* std::string base_path = std::string(homedir) + "/.dropboxUFRGS";  TODO: uncomment me */
+    std::string base_path = "./";
     std::string sync_dir = "/sync_dir";
     FileManager file_manager;
     std::string command, arg;
@@ -83,9 +84,6 @@ void InputManager::run()
 
     packet p = client_soc->build_packet_sized(packet_type::SYNC_DIR_REQ, 0, 1, 1, "");
     this->set_packet(&p);
-    packet response = this->await_response();
-    printf("Received: %s\n", response._payload);
-
 
     while (running) {
         uint16_t _packet_type = -1;
@@ -190,41 +188,6 @@ void InputManager::run()
         {
             packet p = client_soc->build_packet_sized(_packet_type, 0, 1, size, buf);
             this->set_packet(&p);
-            packet response = this->await_response();
-            if(deleting)
-            {
-                deleting = false;
-                std::string file = base_path + sync_dir + "/" + arg;
-                printf("Received: %s\n", response._payload);
-                if(response.type == packet_type::DELETE_REFUSE_RESP)
-                {
-                printf("Local: Delete aborted to keep data consistency\nTo delete independently from server use \'delete <filename.ext>\'\n");
-                }
-                else if(remove(file.c_str()) < 0)
-                {
-                printf("Local: Failed to remove file\n");
-                }
-                else
-                {
-                printf("Local: Successfully removed file\n");
-                }
-            }
-            if(download)
-            {
-                download = false;
-                serialized_file_t sf = File::from_data(response._payload);
-                File write_file(sf);
-                printf("Received: %s\n", write_file.filename.c_str());
-                std::string path = base_path + sync_dir;
-                if(write_file.write_file(path) < 0)
-                {
-                printf("Local: Failed writing received file\n");
-                }
-            }
-            else
-            {
-                printf("Received: %s\n", response._payload);
-            }
         }
     }
     this->done_lock.lock();

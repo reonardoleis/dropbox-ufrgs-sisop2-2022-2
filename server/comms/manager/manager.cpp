@@ -218,6 +218,13 @@ void *Manager::handle_connection(void *input)
 
         packet p = connection->build_packet(p_type, 0, 0, message.c_str());
         connection->write_packet(&p);
+
+        // broadcast the upload to other user connections
+        char * file_bytes = file.to_data();
+        uint32_t size = file.get_payload_size();
+        packet broadcast_packet = connection->build_packet_sized(packet_type::DOWNLOAD_ACCEPT_RESP, 0, 0, size, file_bytes);
+        err = in->manager->broadcast_to_user(username, -1, &broadcast_packet);
+        logger.set("here " + username).stamp().info();
         break;
     }
     case packet_type::DOWNLOAD_REQ:
@@ -250,8 +257,16 @@ void *Manager::handle_connection(void *input)
 
             message = file->to_data();
             size = file->get_payload_size();
+
+            logger.set("file content: " + std::string(message + sizeof(int) + 256)).stamp().info();
+            logger.set("file name: " + std::string(message + sizeof(int))).stamp().info();
+            logger.set("size: " + std::to_string(size)).stamp().info();
+            logger.set("sizeof(payload): " + std::to_string(sizeof(message))).stamp().info();
+            logger.set("sizeof(serialized_file_t): " + std::to_string(sizeof(serialized_file_t))).stamp().info();
         }
         packet p = connection->build_packet_sized(p_type, 0, 0, size, message);
+        logger.set("p.payload: " + std::string(p._payload + sizeof(int) +256)).stamp().info();
+
         connection->write_packet(&p);
         
         break;
@@ -310,7 +325,7 @@ void *Manager::handle_connection(void *input)
         {
             logger.set("successfully deleted " + filename + " for user " + username).stamp().info();
             p_type = packet_type::DELETE_ACCEPT_RESP;
-            message = "successfully deleted file";
+            message = filename;
             size = message.length();
         }
 
@@ -327,6 +342,28 @@ void *Manager::handle_connection(void *input)
 
     connection->set_is_waiting(false);
     return NULL;
+}
+
+int Manager::broadcast_to_user(std::string username, int except_socketfd, packet *p)
+{
+    if (this->users.find(username) == this->users.end())
+    {
+        return -1;
+    }
+    cli_logger logger = cli_logger(frontend.get_log_stream());
+    User user = this->users[username];
+    Socket *connections = user.get_connections();
+    int active_connections_count = user.get_active_connections_count();
+
+    for (int i = 0; i < active_connections_count; i++)
+    {
+        if (connections[i].sockfd != except_socketfd)
+        {
+            connections[i].write_packet(p);
+        }
+    }
+
+    return 0;
 }
 
 void Manager::close_all_connections()

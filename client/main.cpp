@@ -16,6 +16,72 @@
 #include "../commons/file_manager/file.hpp"
 
 
+void *packet_listener(void *arg)
+{
+
+  std::string base_path = "./";
+  std::string sync_dir = "/sync_dir";
+  FileManager file_manager;
+
+  ClientSocket *client_soc = (ClientSocket*) arg;
+
+
+  while (true)
+  {
+
+    packet p = client_soc->read_packet();
+
+    printf("type: %d\nlength: %d\nPayload: %s\n", p.type, p.length, p._payload);
+
+    switch (p.type)
+    {
+    case packet_type::DELETE_ACCEPT_RESP:
+    {
+      std::string file = base_path + sync_dir + "/" + p._payload;
+      printf("Received: successfully deleted %s\n", p._payload);
+      if (remove(file.c_str()) < 0)
+      {
+        printf("Local: Failed to remove file\n");
+      }
+      else
+      {
+        printf("Local: Successfully removed file\n");
+      }
+      
+      break;
+    }
+    case packet_type::DOWNLOAD_ACCEPT_RESP:
+    {
+      printf("attempting to download payload %s\n", p._payload + sizeof(int));
+
+      serialized_file_t sf = File::from_data(p._payload);
+      File write_file(sf);
+      printf("Received: %s\n", write_file.filename.c_str());
+      std::string path = base_path + sync_dir;
+      if (write_file.write_file(path) < 0)
+      {
+        printf("Local: Failed writing received file\n");
+      }
+      break;
+    }
+    case packet_type::DELETE_REFUSE_RESP:
+    {
+      printf("Received: failed to delete file\n");
+      break;
+    }
+    case packet_type::DOWNLOAD_REFUSE_RESP:
+    {
+      printf("Received: %s\n", p._payload);
+      break;
+    }
+    default:
+    {
+      printf("Received: %s\n", p._payload);
+    }
+    }
+  }
+}
+
 int main(int argc, char *argv[])
 {
   if (argc < 4)
@@ -34,7 +100,6 @@ int main(int argc, char *argv[])
   std::string sync_dir = "/sync_dir";
   FileManager file_manager;
 
-    
   username = argv[1];
   server_address_str = argv[2];
   port = atoi(argv[3]);
@@ -46,7 +111,7 @@ int main(int argc, char *argv[])
 
   packet p = client_soc.build_packet(packet_type::LOGIN_REQ, 0, 1, username.c_str());
   client_soc.write_packet(&p);
-  
+
   packet response = client_soc.read_packet();
   printf("response: %s\n", response._payload);
 
@@ -54,24 +119,24 @@ int main(int argc, char *argv[])
   pthread_t input_thread_id = 0;
   pthread_create(&input_thread_id, NULL, InputManager::thread_ready, &input_manager);
 
-  while (!input_manager.is_done()) {
+  pthread_t packet_listener_thread_id = 0;
+
+
+  pthread_create(&packet_listener_thread_id, NULL, packet_listener, &client_soc);
+
+  while (!input_manager.is_done())
+  {
     usleep(100);
-    if(input_manager.should_send())
+    if (input_manager.should_send())
     {
       packet p = input_manager.get_packet();
       printf("type: %d\nlength: %d\nPayload: %s", p.type, p.length, p._payload);
       client_soc.write_packet(&p);
-      if(input_manager.is_waiting())
-      {
-        input_manager.give_response();
-      }
     }
-
   }
-  
+
   sleep(1);
   client_soc.close_connection();
 
   return 0;
 }
-

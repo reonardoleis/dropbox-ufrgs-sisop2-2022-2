@@ -14,7 +14,7 @@ void ui_template::run_ui()
     pthread_mutex_unlock(&(this->stop_lock));
     uint pos = 0;
     this->mov_cursor(0, 0);
-    int lines = this->get_term_lines()
+    int lines = this->get_term_lines();
     int console_start = lines *0.9;
     while(!should_stop || should_update)
     {
@@ -27,17 +27,29 @@ void ui_template::run_ui()
             this->should_update = false;
             this->clear();
             std::string prev_logs;
+            std::string temp_prev_logs;
             int line_count = 0;
-            while(std::getline(frame_stream, prev_logs)
+
+            
+            while(frame_stream.rdbuf()->in_avail() > 0)
             {
+                std::getline(frame_stream, temp_prev_logs);
                 line_count += 1;
+                prev_logs += temp_prev_logs + "\n";
+
             }
             int spacing = line_count - console_start;
             std::string new_logs;
-            while(std::getline(log_stream, new_logs))
+            std::string temp_new_log;
+
+
+            while(log_stream.rdbuf()->in_avail() > 0)
             {
                 spacing -= 1;
+                std::getline(log_stream, temp_new_log);
+                new_logs += temp_new_log + "\n";
             }
+        
             if(line_count < console_start)
             {
                 //TODO
@@ -45,7 +57,7 @@ void ui_template::run_ui()
 
             this->frame_stream.str(std::string());
             this->frame_stream.clear();
-            this->frame_stream << prev_logs << this->log_stream.str() << this->console_stream.str();
+            this->frame_stream << prev_logs << new_logs;
             this->log_stream.str(std::string());
             this->log_stream.clear();
             this->console_stream.str(std::string());
@@ -112,7 +124,7 @@ void * ui_template::thread_ready(void* ui)
 
 void ui_template::clear()
 {
-    std::cout() << "\033[2J";
+    std::cout << "\033[2J";
 }
 
 std::stringstream& ui_template::get_log_stream()

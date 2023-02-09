@@ -35,6 +35,7 @@ class Manager {
         Manager(bool *is_router_routing);
         void close_all_connections();
         bool *is_router_routing;
+        int broadcast_to_user(std::string username, int except_socketfd, packet *p);
 };
 
 typedef struct handle_connection_input {
