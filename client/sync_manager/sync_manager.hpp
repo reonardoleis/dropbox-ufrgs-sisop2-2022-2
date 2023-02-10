@@ -4,25 +4,31 @@
 #include <unistd.h>
 #include <string>
 #include <mutex>
+#include <semaphore.h>
+#include "../comms/socket/client_socket.hpp"
 
 class SyncManager
 {
     private:
         int fd;
         int events[256];
-        bool has_event;
+        bool send;
         bool should_stop;
         std::mutex stop_lock;
-        std::mutex event_lock;
+        std::mutex send_lock;
+        sem_t watching;
+        packet *pac;
         int events_amount;
+        Socket *client_soc;
+
     public:
-        SyncManager();
+        SyncManager(Socket *client_socket);
         void watch(std::string filepath);
         static void * thread_ready(void * manager);
-        bool has_events();
-        int* get_events(); // should lock editing events
-        int get_amount(); // should unlock editing events
+        bool should_send();
+        packet get_packet();
+        void set_packet(packet *p); 
         void run();
-        void stop();
+        void stop_sync();
         bool get_stop();
 };

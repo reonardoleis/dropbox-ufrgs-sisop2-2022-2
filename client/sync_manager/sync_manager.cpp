@@ -1,59 +1,55 @@
 #include "sync_manager.hpp"
-
-SyncManager::SyncManager()
+#include <errno.h>
+SyncManager::SyncManager(Socket *client_sock)
 {
-    this->has_event = false;
+    this->send = false;
     this->should_stop = false;
     this->events_amount = 0;
-    this ->fd = inotify_init();
+    this->fd = inotify_init();
+    this->client_soc = client_soc;
+    sem_init(&watching, 0, 0);
 
 }
 
 void SyncManager::watch(std::string filepath)
 {
-    inotify_add_watch(this->fd, filepath.c_str(), IN_MOVED_FROM | IN_MOVED_TO | IN_DELETE | IN_MODIFY | IN_CREATE);
-}
-
-
-bool SyncManager::has_events()
-{
-    this->event_lock.lock();
-    bool ret = this->has_event;
-    this->event_lock.unlock();
-    return ret;
-}
-
-int* SyncManager::get_events()
-{
-    this->event_lock.lock();
-    int *ret = new int[this->events_amount];
-    for(int i = 0; i < this->events_amount; i++)
+    inotify_add_watch(this->fd, filepath.c_str(), IN_MOVED_FROM | IN_MOVED_TO | IN_DELETE | IN_MODIFY | IN_CREATE | IN_MASK_CREATE | IN_ONLYDIR);
+    if((errno != ENOTDIR) && (errno != EEXIST))
     {
-        ret[i] = this->events[i];
+        sem_post(&(this->watching));
     }
-    return ret;
+    else
+    {
+        printf("ERROR: %d\n", errno == EEXIST);
+    }
 }
 
-int SyncManager::get_amount()
-{
-    int ret = this->events_amount;
-    this->events_amount = 0;
-    this->event_lock.unlock();
-    return ret;
-}
 
 void SyncManager::run()
 {
     char buffer[4096] __attribute__ ((aligned(__alignof__(struct inotify_event))));
     const struct inotify_event *event;
+    bool rename = false;
+    sem_wait(&(this->watching));
     while(!this->get_stop())
     {
+        printf("AQUI1\n");
+        int size = 0;
+        std::string message = "";
+        uint16_t p_type = -1;
         int len = 0;
-        while((len <= 0) && (errno == EAGAIN) && !this->get_stop())
+        while((len <= 0) && !this->get_stop())
         {
+            printf("AQUI2\n");
             len = read(this->fd, buffer, sizeof(buffer));
+            printf("LEN: %d\n", len);
             usleep(100);
+            if (len == -1 && errno != EAGAIN) {
+                    printf("AQUI ERRO\n");
+                    exit(EXIT_FAILURE);
+               }
         }
+        printf("AQUI3\n");
         if(len <= 0)
         {
             break;
@@ -61,52 +57,73 @@ void SyncManager::run()
         int count = 0;
         for (char *ptr = buffer; ptr < buffer + len;ptr += sizeof(struct inotify_event) + event->len) 
         {
-            int flags[5] = {};
-            int local_count = 0;
-
             event = (const struct inotify_event *) ptr;
-
-            if (event->mask & IN_MOVED_FROM)
+            printf("%d\n", event->mask);
+            if ((event->mask & IN_MOVED_TO) && rename)
             {
-                flags[local_count] = IN_MOVED_FROM;
-                local_count += 1;
+                rename = false;
             }
-            if (event->mask & IN_MOVED_TO)
+            else if (event->mask & IN_MOVED_FROM)
             {
-                flags[local_count] = IN_MOVED_TO;
-                local_count += 1;
-            }
-            if (event->mask & IN_DELETE)
-            {
-                flags[local_count] = IN_DELETE;
-                local_count += 1;
-            }
-            if (event->mask & IN_MODIFY)
-            {
-                flags[local_count] = IN_MODIFY;
-                local_count += 1;
-            }
-            if (event->mask & IN_CREATE)
-            {
-                flags[local_count] = IN_CREATE;
-                local_count += 1;
-            }
-
-            if(local_count > 0)
-            {
-                this->event_lock.lock();
-                for(int i = 0; i < local_count; i++)
+                if(event->cookie > 0)
                 {
-                    this->events[this->events_amount] = flags[i];
-                    this->events_amount += 1;
+                    rename = true;
                 }
-                this->event_lock.unlock();
+                else
+                {
+                    p_type = packet_type::DELETE_REQ;
+                    size = event->len;
+                    message = event->name;
+                }
             }
-        }   
+            else if (event->mask & IN_DELETE)
+            {
+                p_type = packet_type::DELETE_REQ;
+                size = event->len;
+                message = event->name;
+                
+            }
+            else if (event->mask & IN_MODIFY)
+            {
+                p_type = packet_type::UPLOAD_REQ;
+                size = event->len;
+                message = event->name;
+            }
+            else if (event->mask & IN_CREATE)
+            {
+                p_type = packet_type::UPLOAD_REQ;
+                size = event->len;
+                message = event->name;
+            }
+
+            if(!rename)
+            {
+                packet p = this->client_soc->build_packet_sized(packet_type::DELETE_REQ, 0, 0, event->len, event->name);
+                this->set_packet(&p);
+            }
+        }
     }
+    printf("\n\nAQUI\n\n");
 }
 
-void SyncManager::stop()
+packet SyncManager::get_packet()
+{
+    this->send_lock.lock();
+    send = false;
+    packet ret = *(this->pac);
+    this->send_lock.unlock();
+    return ret;
+}
+
+void SyncManager::set_packet(packet *p)
+{
+    this->send_lock.lock();
+    send = true;
+    this->pac = new packet(*p);
+    this->send_lock.unlock();
+}
+
+void SyncManager::stop_sync()
 {
     this->stop_lock.lock();
     this->should_stop = true;
@@ -121,8 +138,17 @@ bool SyncManager::get_stop()
     return ret;
 }
 
+bool SyncManager::should_send()
+{
+    this->send_lock.lock();
+    bool ret = send;
+    this->send_lock.unlock();
+    return ret;
+}
+
 void * SyncManager::thread_ready(void * manager)
 {
     SyncManager* sm = (SyncManager *)manager;
     sm->run();
+    return NULL;
 }

@@ -14,6 +14,7 @@
 #include "./comms/input_manager/input_manager.hpp"
 #include "../commons/file_manager/file_manager.hpp"
 #include "../commons/file_manager/file.hpp"
+#include "./sync_manager/sync_manager.hpp"
 
 
 void *packet_listener(void *arg)
@@ -115,13 +116,18 @@ int main(int argc, char *argv[])
   packet response = client_soc.read_packet();
   printf("response: %s\n", response._payload);
 
+
+  SyncManager sync_manager(&client_soc);
+  pthread_t sync_thread_id = 0;
+  pthread_create(&sync_thread_id, NULL, SyncManager::thread_ready, &sync_manager);
+  
   InputManager input_manager(&client_soc);
+  inputmanager_input_t inman_input = {&input_manager, &sync_manager};
   pthread_t input_thread_id = 0;
-  pthread_create(&input_thread_id, NULL, InputManager::thread_ready, &input_manager);
+  pthread_create(&input_thread_id, NULL, InputManager::thread_ready, &inman_input);
+
 
   pthread_t packet_listener_thread_id = 0;
-
-
   pthread_create(&packet_listener_thread_id, NULL, packet_listener, &client_soc);
 
   while (!input_manager.is_done())
@@ -129,14 +135,24 @@ int main(int argc, char *argv[])
     usleep(100);
     if (input_manager.should_send())
     {
-      packet p = input_manager.get_packet();
-      printf("type: %d\nlength: %d\nPayload: %s", p.type, p.length, p._payload);
-      client_soc.write_packet(&p);
+      packet p1 = input_manager.get_packet();
+      //printf("type: %d\nlength: %d\nPayload: %s", p.type, p.length, p._payload);
+      client_soc.write_packet(&p1);
+    }
+    if (sync_manager.should_send())
+    {
+      packet p2 = sync_manager.get_packet();
+      //printf("type: %d\nlength: %d\nPayload: %s", p.type, p.length, p._payload);
+      client_soc.write_packet(&p2);
     }
   }
 
-  sleep(1);
   client_soc.close_connection();
+
+  pthread_join(input_thread_id, NULL);
+  pthread_join(sync_thread_id, NULL);
+  pthread_join(packet_listener_thread_id, NULL);
+
 
   return 0;
 }

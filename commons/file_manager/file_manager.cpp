@@ -23,7 +23,7 @@ int FileManager::create_directory(std::string &path)
 
 void FileManager::set_base_path(std::string &path)
 {
-    this->base_path = path;
+    this->base_path = path.c_str();
 }
 
 int FileManager::list_directory(std::string &path, std::string &out)

@@ -5,26 +5,8 @@ InputManager::InputManager(Socket *soc)
     client_soc = soc;
     waiting = false;
     done = false;
-    sem_init(&await, 0, 0);
 }
 
-packet InputManager::await_response()
-{
-    this->waiting_lock.lock();
-    this->waiting = true;
-    this->waiting_lock.unlock();
-    sem_wait(&await);
-    this->waiting_lock.lock();
-    this->waiting = false;
-    packet p = this->client_soc->read_packet();
-    this->waiting_lock.unlock();
-    return p;
-
-}
-void InputManager::give_response()
-{
-    sem_post(&await);
-}
 bool InputManager::is_waiting()
 {
     this->waiting_lock.lock();
@@ -69,20 +51,22 @@ void InputManager::run()
 {
     struct passwd *pw = getpwuid(getuid());
     const char *homedir = pw->pw_dir;
-    /* std::string base_path = std::string(homedir) + "/.dropboxUFRGS";  TODO: uncomment me */
-    std::string base_path = "./";
+    std::string base_path = std::string(homedir);
     std::string sync_dir = "/sync_dir";
     FileManager file_manager;
+    printf("CU1\n");
+    file_manager.set_base_path(base_path);
     std::string command, arg;
     bool download=false, remote = false, deleting=false, running = true;
 
+    printf("CU2\n");
     //initial sync_dir
     if(file_manager.create_directory(sync_dir) < 0)
     {
         printf("Local: Failed to create local sync_dir\n");
     }
-
     packet p = client_soc->build_packet_sized(packet_type::SYNC_DIR_REQ, 0, 1, 1, "");
+    printf("CU3\n");
     this->set_packet(&p);
 
     while (running) {
@@ -106,9 +90,14 @@ void InputManager::run()
 
         if (command.compare("get_sync_dir") == 0) {
             _packet_type = packet_type::SYNC_DIR_REQ;
-            if(file_manager.create_directory(sync_dir) < 0)
+            std::string watch_path = base_path + sync_dir;
+            if(file_manager.create_directory(watch_path) < 0)
             {
                 printf("Local: Failed to create local sync_dir\n");
+            }
+            else
+            {
+                this->sync_manager->watch(sync_dir);
             }
         }
 
@@ -190,6 +179,7 @@ void InputManager::run()
             this->set_packet(&p);
         }
     }
+    this->sync_manager->stop_sync();
     this->done_lock.lock();
     this->done = true;
     this->done_lock.unlock();
@@ -197,6 +187,8 @@ void InputManager::run()
 
 void * InputManager::thread_ready(void * manager)
 {
-    InputManager* sm = (InputManager *)manager;
-    sm->run();
+    inputmanager_input_t* in = (inputmanager_input_t *)manager;
+    in->inp_man->sync_manager = in->sync_manager;
+    in->inp_man->run();
+    return NULL;
 }
