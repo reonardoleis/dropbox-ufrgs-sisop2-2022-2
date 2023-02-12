@@ -194,8 +194,8 @@ void *Manager::handle_connection(void *input)
     {
         UploadController upload_controller = UploadController();
         cli_logger logger = cli_logger(frontend.get_log_stream());
-        logger.set("uploading file for user " + username).stamp().info();
         serialized_file_t serialized_file = File::from_data(p._payload);
+        logger.set("uploading file " + std::string(serialized_file.filename) + " for user " + username).stamp().info();
 
         File file = File("");
         file.deserialize(serialized_file);
@@ -223,7 +223,7 @@ void *Manager::handle_connection(void *input)
         char * file_bytes = file.to_data();
         uint32_t size = file.get_payload_size();
         packet broadcast_packet = connection->build_packet_sized(packet_type::DOWNLOAD_ACCEPT_RESP, 0, 0, size, file_bytes);
-        err = in->manager->broadcast_to_user(username, -1, &broadcast_packet);
+        err = in->manager->broadcast_to_user(username, connection->sockfd, &broadcast_packet);
         logger.set("here " + username).stamp().info();
         break;
     }

@@ -10,7 +10,7 @@ run-server:
 test-server: build-server run-server
 
 build-client:
-	g++ $(CLIENT_FILES) -o ./client/bin/client -lpthread
+	g++ -g $(CLIENT_FILES) -o ./client/bin/client -lpthread
 
 run-client:
 	./client/bin/client

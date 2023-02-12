@@ -29,9 +29,10 @@ int main(int argc, char *argv[])
     router.start();
  
 
-    master_socket.close_connection();
     logger.set("Closing server...").stamp().info();
     frontend.stop_ui();
     pthread_join(ui_thread_id, NULL);
+    sleep(1);
+    master_socket.close_connection();
     return 0;
 }
