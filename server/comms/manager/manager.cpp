@@ -331,6 +331,11 @@ void *Manager::handle_connection(void *input)
 
         packet p = connection->build_packet_sized(p_type, 0, 0, size, message.c_str());
         connection->write_packet(&p);
+
+        // broadcast the upload to other user connections
+        packet broadcast_packet = connection->build_packet_sized(packet_type::DELETE_BROADCAST, 0, 0, size, message.c_str());
+        err = in->manager->broadcast_to_user(username, connection->sockfd, &broadcast_packet);
+
         break;
     }
     default:

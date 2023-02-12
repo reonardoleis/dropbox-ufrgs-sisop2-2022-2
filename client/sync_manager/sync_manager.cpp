@@ -129,14 +129,15 @@ void SyncManager::run()
                     printf("NOTIFY PACKET: %d | %s\n", size, event->name);
                     packet p = this->client_soc->build_packet_sized(p_type, 0, 0, size, message);
                     this->set_packet(&p);
-                } else {
-                    this->should_ignore_lock.lock();
-                    this->should_ignore = false;
-                    this->should_ignore_lock.unlock();
                 }
             }
         }
+
+        this->should_ignore_lock.lock();
+        this->should_ignore = false;
+        this->should_ignore_lock.unlock();
     }
+
     inotify_rm_watch(this->fd, this->wd);
     close(this->fd);
 }
