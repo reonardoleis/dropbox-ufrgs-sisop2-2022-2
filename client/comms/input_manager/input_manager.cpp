@@ -135,6 +135,9 @@ void InputManager::run()
         if (command.compare("download") == 0) {
             _packet_type = packet_type::DOWNLOAD_REQ;
             buf = arg.c_str();
+
+            
+
             size = arg.length() + 1;
             download = true;
         }

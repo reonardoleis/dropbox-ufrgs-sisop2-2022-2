@@ -77,6 +77,7 @@ void *packet_listener(void *arg)
       std::string file = base_path + sync_dir + "/" + p._payload;
       remove(file.c_str());
       printf("Local: deleted %s (delete broadcast)\n", p._payload);
+      break;
     }
     case packet_type::UPLOAD_BROADCAST:
     {

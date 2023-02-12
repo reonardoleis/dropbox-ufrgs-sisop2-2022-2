@@ -223,7 +223,7 @@ void *Manager::handle_connection(void *input)
         char * file_bytes = file.to_data();
         uint32_t size = file.get_payload_size();
         packet broadcast_packet = connection->build_packet_sized(packet_type::UPLOAD_BROADCAST, 0, 0, size, file_bytes);
-        err = in->manager->broadcast_to_user(username, connection->sockfd, &broadcast_packet);
+        err = in->manager->broadcast_to_user(username, -1, &broadcast_packet);
         logger.set("here " + username).stamp().info();
         break;
     }
@@ -329,11 +329,11 @@ void *Manager::handle_connection(void *input)
             size = message.length();
         }
 
-        packet p = connection->build_packet_sized(p_type, 0, 0, size, message.c_str());
+        packet p = connection->build_packet_sized(p_type, 0, 0, size + 1, message.c_str());
         connection->write_packet(&p);
 
         // broadcast the upload to other user connections
-        packet broadcast_packet = connection->build_packet_sized(packet_type::DELETE_BROADCAST, 0, 0, size, message.c_str());
+        packet broadcast_packet = connection->build_packet_sized(packet_type::DELETE_BROADCAST, 0, 0, size + 1, message.c_str());
         err = in->manager->broadcast_to_user(username, connection->sockfd, &broadcast_packet);
 
         break;
