@@ -59,7 +59,7 @@ void InputManager::run()
         running = false;
         printf("Failed to get running directory: ERRNO %d", errno);
     }
-    cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
+    cCurrentPath[sizeof(cCurrentPath) - 1] = '\0';
 
     std::string base_path = cCurrentPath;
     std::string sync_dir = "/sync_dir";

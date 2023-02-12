@@ -6,7 +6,7 @@ SyncManager::SyncManager(Socket *client_sock)
     this->should_stop = false;
     this->events_amount = 0;
     this->fd = inotify_init1(IN_NONBLOCK);
-    this->wd = NULL;
+    this->wd = 0;
     this->client_soc = client_soc;
     sem_init(&watching, 0, 0);
 
@@ -31,19 +31,23 @@ void SyncManager::run()
 {
     char buffer[4096] __attribute__ ((aligned(__alignof__(struct inotify_event))));
     const struct inotify_event *event;
+    char cCurrentPath[FILENAME_MAX];
+    if (!getcwd(cCurrentPath, sizeof(cCurrentPath)))
+    {
+        this->stop_sync();
+        printf("Failed to get running directory: ERRNO %d", errno);
+    }
+    cCurrentPath[sizeof(cCurrentPath) - 1] = '\0';
     bool rename = false;
     sem_wait(&(this->watching));
-    printf("AQUI1.1\n");
     while(!this->get_stop())
     {
-        printf("AQUI1.2\n");
         int size = 0;
-        std::string message = "";
+        char* message = NULL;
         uint16_t p_type = -1;
         int len = 0;
         while((len <= 0) && !this->get_stop())
         {
-            //printf("Trying\n");
             len = read(this->fd, buffer, sizeof(buffer));
             if (len == -1 && errno != EAGAIN) {
                     printf("AQUI ERRO\n");
@@ -51,7 +55,6 @@ void SyncManager::run()
                }
             usleep(100);
         }
-        printf("Done trying\n");
         if(len <= 0)
         {
             break;
@@ -62,67 +65,75 @@ void SyncManager::run()
             size = 0;
             event = (const struct inotify_event *) ptr;
             printf("EVENT MASK: %x\n", event->mask);
-            if ((event->mask & IN_MOVED_TO) && rename)
+            if (event->mask & IN_MOVED_TO)
             {
-                rename = false;
+                printf("NOTIFY CREATE\n");
+                p_type = packet_type::UPLOAD_REQ;
+                File f = File(event->name);
+                std::string base_path = std::string(cCurrentPath); 
+                std::string sync_dir = base_path + std::string("/sync_dir");
+                f.read_file(sync_dir);
+                size = f.get_payload_size();
+                message = f.to_data();
             }
             else if (event->mask & IN_MOVED_FROM)
             {
-                if(event->cookie > 0)
-                {
-                    rename = true;
-                }
-                else
-                {
-                    p_type = packet_type::DELETE_REQ;
-                    size = event->len;
-                    message = event->name;
-                }
+                p_type = packet_type::DELETE_REQ;
+                size = event->len;
+                message = (char *)event->name;
             }
             else if (event->mask & IN_DELETE)
             {
                 printf("NOTIFY DELETE\n");
                 p_type = packet_type::DELETE_REQ;
                 size = event->len;
-                message = event->name;
+                message = (char *)event->name;
                 
             }
-            else if (event->mask & IN_CLOSE_WRITE)
+            else if (event->mask & IN_MODIFY)
             {
                 printf("NOTIFY MODIFY\n");
                 p_type = packet_type::UPLOAD_REQ;
-                size = event->len;
-                message = event->name;
+                File f = File(event->name);
+                std::string base_path = std::string(cCurrentPath); 
+                std::string sync_dir = base_path + std::string("/sync_dir");
+                f.read_file(sync_dir);
+                size = f.get_payload_size();
+                message = f.to_data();
             }
             else if (event->mask & IN_CREATE)
             {
                 printf("NOTIFY CREATE\n");
                 p_type = packet_type::UPLOAD_REQ;
-                size = event->len;
-                message = event->name;
+                File f = File(event->name);
+                std::string base_path = std::string(cCurrentPath); 
+                std::string sync_dir = base_path + std::string("/sync_dir");
+                f.read_file(sync_dir);
+                size = f.get_payload_size();
+                message = f.to_data();
             }
-            else if (event->mask)
+            else if (event->mask & IN_CLOSE_WRITE)
             {
-                printf("NOTIFY CREATE\n");
+                printf("NOTIFY MODIFY\n");
                 p_type = packet_type::UPLOAD_REQ;
-                size = event->len;
-                message = event->name;
+                File f = File(event->name);
+                std::string base_path = std::string(cCurrentPath); 
+                std::string sync_dir = base_path + std::string("/sync_dir");
+                f.read_file(sync_dir);
+                size = f.get_payload_size();
+                message = f.to_data();
             }
 
             if(!rename && size > 0)
             {
-                char event_name[event->len + 1];
-                memcpy(event_name, event->name, event->len);
-                event_name[event->len] = '\0';
-                printf("NOTIFY PACKET: %d | %s\n", event->len, event->name);
-                packet p = this->client_soc->build_packet_sized(p_type, 0, 0, event->len + 1, event_name);
+                printf("NOTIFY PACKET: %d | %s\n", size, event->name);
+                packet p = this->client_soc->build_packet_sized(p_type, 0, 0, size, message);
                 this->set_packet(&p);
             }
         }
     }
     inotify_rm_watch(this->fd, this->wd);
     close(this->fd);
-    printf("\n\nAQUI\n\n");
 }
 
 packet SyncManager::get_packet()
