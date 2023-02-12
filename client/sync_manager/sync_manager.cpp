@@ -5,7 +5,8 @@ SyncManager::SyncManager(Socket *client_sock)
     this->send = false;
     this->should_stop = false;
     this->events_amount = 0;
-    this->fd = inotify_init();
+    this->fd = inotify_init1(IN_NONBLOCK);
+    this->wd = NULL;
     this->client_soc = client_soc;
     sem_init(&watching, 0, 0);
 
@@ -13,14 +14,15 @@ SyncManager::SyncManager(Socket *client_sock)
 
 void SyncManager::watch(std::string filepath)
 {
-    inotify_add_watch(this->fd, filepath.c_str(), IN_MOVED_FROM | IN_MOVED_TO | IN_DELETE | IN_MODIFY | IN_CREATE | IN_MASK_CREATE | IN_ONLYDIR);
-    if((errno != ENOTDIR) && (errno != EEXIST))
+    this->wd = inotify_add_watch(this->fd, filepath.c_str(), IN_MOVED_FROM | IN_MOVED_TO | IN_DELETE | IN_MODIFY | IN_CREATE);
+    if((errno != ENOTDIR))
     {
         sem_post(&(this->watching));
+        printf("%s",(errno != EEXIST) ? "Local: Watcher created\n" : "Local: Using existing watcher\n");
     }
     else
     {
-        printf("ERROR: %d\n", errno == EEXIST);
+        printf("ERROR: Path is not a directory\n");
     }
 }
 
@@ -31,25 +33,25 @@ void SyncManager::run()
     const struct inotify_event *event;
     bool rename = false;
     sem_wait(&(this->watching));
+    printf("AQUI1.1\n");
     while(!this->get_stop())
     {
-        printf("AQUI1\n");
+        printf("AQUI1.2\n");
         int size = 0;
         std::string message = "";
         uint16_t p_type = -1;
         int len = 0;
         while((len <= 0) && !this->get_stop())
         {
-            printf("AQUI2\n");
+            //printf("Trying\n");
             len = read(this->fd, buffer, sizeof(buffer));
-            printf("LEN: %d\n", len);
-            usleep(100);
             if (len == -1 && errno != EAGAIN) {
                     printf("AQUI ERRO\n");
                     exit(EXIT_FAILURE);
                }
+            usleep(100);
         }
-        printf("AQUI3\n");
+        printf("Done trying\n");
         if(len <= 0)
         {
             break;
@@ -57,8 +59,9 @@ void SyncManager::run()
         int count = 0;
         for (char *ptr = buffer; ptr < buffer + len;ptr += sizeof(struct inotify_event) + event->len) 
         {
+            size = 0;
             event = (const struct inotify_event *) ptr;
-            printf("%d\n", event->mask);
+            printf("EVENT MASK: %x\n", event->mask);
             if ((event->mask & IN_MOVED_TO) && rename)
             {
                 rename = false;
@@ -78,31 +81,47 @@ void SyncManager::run()
             }
             else if (event->mask & IN_DELETE)
             {
+                printf("NOTIFY DELETE\n");
                 p_type = packet_type::DELETE_REQ;
                 size = event->len;
                 message = event->name;
                 
             }
-            else if (event->mask & IN_MODIFY)
+            else if (event->mask & IN_CLOSE_WRITE)
             {
+                printf("NOTIFY MODIFY\n");
                 p_type = packet_type::UPLOAD_REQ;
                 size = event->len;
                 message = event->name;
             }
             else if (event->mask & IN_CREATE)
             {
+                printf("NOTIFY CREATE\n");
+                p_type = packet_type::UPLOAD_REQ;
+                size = event->len;
+                message = event->name;
+            }
+            else if (event->mask)
+            {
+                printf("NOTIFY CREATE\n");
                 p_type = packet_type::UPLOAD_REQ;
                 size = event->len;
                 message = event->name;
             }
 
-            if(!rename)
+            if(!rename && size > 0)
             {
-                packet p = this->client_soc->build_packet_sized(packet_type::DELETE_REQ, 0, 0, event->len, event->name);
+                char event_name[event->len + 1];
+                memcpy(event_name, event->name, event->len);
+                event_name[event->len] = '\0';
+                printf("NOTIFY PACKET: %d | %s\n", event->len, event->name);
+                packet p = this->client_soc->build_packet_sized(p_type, 0, 0, event->len + 1, event_name);
                 this->set_packet(&p);
             }
         }
     }
+    inotify_rm_watch(this->fd, this->wd);
+    close(this->fd);
     printf("\n\nAQUI\n\n");
 }
 
@@ -121,6 +140,7 @@ void SyncManager::set_packet(packet *p)
     send = true;
     this->pac = new packet(*p);
     this->send_lock.unlock();
+    usleep(100);
 }
 
 void SyncManager::stop_sync()

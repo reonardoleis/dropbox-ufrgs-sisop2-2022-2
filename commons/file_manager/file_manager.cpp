@@ -14,10 +14,11 @@ FileManager::FileManager(){}
 
 int FileManager::create_directory(std::string &path)
 {
-    mkdir(this->base_path.c_str(), 0777);
+    //mkdir(this->base_path.c_str(), 0777);
 
     std::string full_path = this->base_path + path;
     int err = mkdir(full_path.c_str(), 0777);
+    printf("MKDIR: %d | %d | %s\n", err, errno, full_path.c_str());
     return errno == EEXIST ? 1 : err;
 }
 

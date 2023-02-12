@@ -1,10 +1,12 @@
 #include "input_manager.hpp"
+#include <unistd.h>
 
 InputManager::InputManager(Socket *soc)
 {
     client_soc = soc;
     waiting = false;
     done = false;
+    send = false;
 }
 
 bool InputManager::is_waiting()
@@ -42,31 +44,39 @@ packet InputManager::get_packet()
 void InputManager::set_packet(packet *p)
 {
     this->send_lock.lock();
-    send = true;
+    this->send = true;
     this->pac = new packet(*p);
     this->send_lock.unlock();
+    usleep(100);
 }
 
 void InputManager::run()
 {
-    struct passwd *pw = getpwuid(getuid());
-    const char *homedir = pw->pw_dir;
-    std::string base_path = std::string(homedir);
+    bool download=false, remote = false, deleting=false, running = true;
+    char cCurrentPath[FILENAME_MAX];
+    if (!getcwd(cCurrentPath, sizeof(cCurrentPath)))
+    {
+        running = false;
+        printf("Failed to get running directory: ERRNO %d", errno);
+    }
+    cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
+
+    std::string base_path = cCurrentPath;
     std::string sync_dir = "/sync_dir";
     FileManager file_manager;
-    printf("CU1\n");
     file_manager.set_base_path(base_path);
     std::string command, arg;
-    bool download=false, remote = false, deleting=false, running = true;
 
-    printf("CU2\n");
     //initial sync_dir
     if(file_manager.create_directory(sync_dir) < 0)
     {
         printf("Local: Failed to create local sync_dir\n");
     }
+    else
+    {
+        printf("Local: sync_dir created or already existed\n");
+    }
     packet p = client_soc->build_packet_sized(packet_type::SYNC_DIR_REQ, 0, 1, 1, "");
-    printf("CU3\n");
     this->set_packet(&p);
 
     while (running) {
@@ -91,13 +101,13 @@ void InputManager::run()
         if (command.compare("get_sync_dir") == 0) {
             _packet_type = packet_type::SYNC_DIR_REQ;
             std::string watch_path = base_path + sync_dir;
-            if(file_manager.create_directory(watch_path) < 0)
+            if(file_manager.create_directory(sync_dir) < 0)
             {
                 printf("Local: Failed to create local sync_dir\n");
             }
             else
             {
-                this->sync_manager->watch(sync_dir);
+                this->sync_manager->watch(watch_path);
             }
         }
 

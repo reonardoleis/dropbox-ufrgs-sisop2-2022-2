@@ -11,6 +11,7 @@ class SyncManager
 {
     private:
         int fd;
+        int wd;
         int events[256];
         bool send;
         bool should_stop;

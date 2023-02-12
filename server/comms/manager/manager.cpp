@@ -194,8 +194,8 @@ void *Manager::handle_connection(void *input)
     {
         UploadController upload_controller = UploadController();
         cli_logger logger = cli_logger(frontend.get_log_stream());
-        logger.set("uploading file for user " + username).stamp().info();
         serialized_file_t serialized_file = File::from_data(p._payload);
+        logger.set("uploading file " + std::string(serialized_file.filename) + " for user " + username).stamp().info();
 
         File file = File("");
         file.deserialize(serialized_file);
