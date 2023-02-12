@@ -17,6 +17,11 @@
 #include "./sync_manager/sync_manager.hpp"
 
 
+typedef struct packet_listener_input_t {
+  ClientSocket *client_soc;
+  SyncManager *sync_manager;
+} packet_listener_input_t;
+
 void *packet_listener(void *arg)
 {
 
@@ -24,8 +29,9 @@ void *packet_listener(void *arg)
   std::string sync_dir = "/sync_dir";
   FileManager file_manager;
 
-  ClientSocket *client_soc = (ClientSocket*) arg;
-
+  packet_listener_input_t *in = (packet_listener_input_t*) arg;
+  ClientSocket *client_soc = in->client_soc;
+  SyncManager *sync_manager = in->sync_manager;
 
   while (true)
   {
@@ -53,6 +59,21 @@ void *packet_listener(void *arg)
     }
     case packet_type::DOWNLOAD_ACCEPT_RESP:
     {
+      printf("attempting to download payload %s\n", p._payload + sizeof(int));
+
+      serialized_file_t sf = File::from_data(p._payload);
+      File write_file(sf);
+      printf("Received: %s\n", write_file.filename.c_str());
+      std::string path = base_path + sync_dir;
+      if (write_file.write_file(path) < 0)
+      {
+        printf("Local: Failed writing received file\n");
+      }
+      break;
+    }
+    case packet_type::UPLOAD_BROADCAST:
+    {
+      sync_manager->ignore();
       printf("attempting to download payload %s\n", p._payload + sizeof(int));
 
       serialized_file_t sf = File::from_data(p._payload);
@@ -116,7 +137,6 @@ int main(int argc, char *argv[])
   packet response = client_soc.read_packet();
   printf("response: %s\n", response._payload);
 
-
   SyncManager sync_manager(&client_soc);
   pthread_t sync_thread_id = 0;
   pthread_create(&sync_thread_id, NULL, SyncManager::thread_ready, &sync_manager);
@@ -127,8 +147,9 @@ int main(int argc, char *argv[])
   pthread_create(&input_thread_id, NULL, InputManager::thread_ready, &inman_input);
 
 
+  packet_listener_input_t in = {&client_soc, &sync_manager};
   pthread_t packet_listener_thread_id = 0;
-  pthread_create(&packet_listener_thread_id, NULL, packet_listener, &client_soc);
+  pthread_create(&packet_listener_thread_id, NULL, packet_listener, &in);
 
   while (!input_manager.is_done())
   {

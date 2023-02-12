@@ -22,6 +22,8 @@ class SyncManager
         packet *pac;
         int events_amount;
         Socket *client_soc;
+        std::mutex should_ignore_lock;
+        bool should_ignore;
 
     public:
         SyncManager(Socket *client_socket);
@@ -33,4 +35,6 @@ class SyncManager
         void run();
         void stop_sync();
         bool get_stop();
+        bool get_should_ignore();
+        void ignore();
 };
