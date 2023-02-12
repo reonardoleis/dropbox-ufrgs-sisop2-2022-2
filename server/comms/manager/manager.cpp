@@ -159,23 +159,26 @@ void *Manager::handle_connection(void *input)
             logger.stamp().set("error syncing directory for user " + username).error();
             packet_type = packet_type::SYNC_DIR_REFUSE_RESP;
             message = "error syncing directory";
+            packet p = connection->build_packet(packet_type, 0, 0, message.c_str());
+            connection->write_packet(&p);
         }
         else
         {
             if(err == 1)
             {
                 logger.stamp().set("sync_directory for user " + username + "already exists").info();
+                this->sync_files(username, connection);
             }
             else
             {
                 logger.stamp().set("successfully created directory for user " + username).info();
+                packet_type = packet_type::SYNC_DIR_ACCEPT_RESP;
+                message = "successfully synced directory";
+                packet p = connection->build_packet(packet_type, 0, 0, message.c_str());
+                connection->write_packet(&p);
             }
-            packet_type = packet_type::SYNC_DIR_ACCEPT_RESP;
-            message = "successfully synced directory\0";
         }
 
-        packet p = connection->build_packet(packet_type, 0, 0, message.c_str());
-        connection->write_packet(&p);
         break;
     }
     case packet_type::STOP_SERVER_REQ:
@@ -369,6 +372,34 @@ int Manager::broadcast_to_user(std::string username, int except_socketfd, packet
     }
 
     return 0;
+}
+
+void Manager::sync_files(std::string username, Socket *connection)
+{
+    DownloadController download_controller = DownloadController();
+    cli_logger logger = cli_logger(frontend.get_log_stream());
+    std::string out, filename, _meta;
+    std::string user_path = "/sync_dir_" + username;
+    int total_files = this->server_file_manager.list_directory(user_path, out);
+    std::stringstream sfs; sfs << out;
+    if(total_files > 0)
+    {
+        int curr_file = 1;
+        while(sfs.rdbuf()->in_avail() > 0)
+        {
+            std::getline(sfs, filename);
+            std::getline(sfs, _meta);
+            File *file;
+            int err = download_controller.download(&file, filename, username);
+            packet p = connection->build_packet_sized(packet_type::SYNC_DIR_ACCEPT_RESP, curr_file, total_files, file->get_payload_size(), file->to_data);
+            curr_file += 1;
+            connection->write_packet(&p);
+        }
+    }
+    else
+    {
+        logger.set("No files to sync").stamp().warning();
+    }
 }
 
 void Manager::close_all_connections()

@@ -7,6 +7,7 @@ InputManager::InputManager(Socket *soc)
     waiting = false;
     done = false;
     send = false;
+    sem_init(&list_sem, 0, 0);
 }
 
 bool InputManager::is_waiting()
@@ -68,20 +69,21 @@ void InputManager::run()
     std::string command, arg;
 
     //initial sync_dir
+    
     if(file_manager.create_directory(sync_dir) < 0)
     {
-        printf("Local: Failed to create local sync_dir\n");
+        printf("Local: Failed to create local sync_dir %s\n", );
     }
     else
     {
         printf("Local: sync_dir created or already existed\n");
+        packet lr = client_soc->build_packet_sized(packet_type::SYNC_DIR_REQ, 0, 0, 1, "");
+        this->set_packet(&lr);
     }
-    packet p = client_soc->build_packet_sized(packet_type::SYNC_DIR_REQ, 0, 1, 1, "");
-    this->set_packet(&p);
+
 
     while (running) {
         uint16_t _packet_type = -1;
-        std::string path = "./";
 
         printf("Enter the command: ");
         command = "";
@@ -204,4 +206,110 @@ void * InputManager::thread_ready(void * manager)
     in->inp_man->sync_manager = in->sync_manager;
     in->inp_man->run();
     return NULL;
+}
+
+
+void InputManager::set_slist(std::string s)
+{
+    this->list_lock.lock();
+    this->server_list = s;
+    this->list_lock.unlock();
+}
+std::string InputManager::get_slist()
+{
+    this->list_lock.lock();
+    std::string ret = this->server_list;
+    this->list_lock.unlock();
+    return ret;
+}
+void InputManager::wait_slist()
+{
+    sem_wait(&list_sem);
+}
+void InputManager::post_slist()
+{
+    sem_post(&list_sem)
+}
+
+
+int verify_sync(std::string server_files, std::string client_files, std::string &out)
+{
+    std::stringstream sfs;  sfs << server_files;
+    std::stringstream cfs;  cfs << client_files;
+    std::string smeta;
+    std::string cmeta;
+    std::string download_files;
+    std::string upload_files;
+    while(sfs.rdbuf()->in_avail() > 0)
+    {
+        std::getline(sfs, server_files);
+        std::getline(sfs, smeta);
+        if(cfs.rdbuf()->in_avail() > 0)
+        {
+            std::getline(cfs, client_files);
+            std::getline(cfs, cmeta);
+            int cmp = server_files.compare(client_files);
+            if(cmp == 0)
+            {
+                int smod_start = smeta.find("\t", smeta.find("\t")+1);
+                int smod_end = smeta.find("\t", smod_start + 1);
+                std::string smod = smeta.substr(smod_start, smod_end);
+
+                int cmod_start = cmeta.find("\t", cmeta.find("\t")+1);
+                int cmod_end = cmeta.find("\t", cmod_start + 1);
+                std::string cmod = cmeta.substr(cmod_start, cmod_end);
+
+                int mcmp = smod.compare(cmod);
+                if(mcmp > 0)
+                {
+                    download_files += server_files + ", ";
+                }
+                else if (cmp < 0)
+                {
+                    upload_files += client_files + ", ";
+                }
+            }
+            else if(cmp < 0)
+            {
+                download_files += server_files + ", ";
+            }
+            else
+            {
+                upload_files += client_files + ", ";
+            }
+        }
+        else
+        {
+            download_files += server_files + ", ";
+        }
+    }
+    while(cfs.rdbuf()->in_avail() > 0)
+    {
+        std::getline(cfs, client_files);
+        std::getline(cfs, cmeta);
+        upload_files += client_files + ", ";
+    }
+    if(download_files.length > 0)
+    {
+        if(upload_files.length() > 0)
+        {
+            out = download_files + "|" + upload_files;
+            return sync_type::MIXED;
+        }
+        else
+        {
+            out = download_files;
+            return sync_type::DOWNLOAD;
+        }
+    }
+    else if(upload_files.length() > 0)
+    {
+        out = upload_files;
+        return sync_type::UPLOAD;
+    }
+    else
+    {
+        out = "";
+        return sync_type::SYNCED;
+    }
 }

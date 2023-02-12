@@ -41,6 +41,3 @@ typedef struct packet{
  packet(const packet &p);
  packet();
 } packet;
-
-
-

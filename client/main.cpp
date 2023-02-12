@@ -20,6 +20,7 @@
 typedef struct packet_listener_input_t {
   ClientSocket *client_soc;
   SyncManager *sync_manager;
+  InputManager *input_manager;
 } packet_listener_input_t;
 
 void *packet_listener(void *arg)
@@ -32,8 +33,9 @@ void *packet_listener(void *arg)
   packet_listener_input_t *in = (packet_listener_input_t*) arg;
   ClientSocket *client_soc = in->client_soc;
   SyncManager *sync_manager = in->sync_manager;
+  InputManager *input_manager = in->input_manager;
 
-  while (true)
+  while (!input_manager->is_done())
   {
 
     packet p = client_soc->read_packet();
@@ -42,6 +44,46 @@ void *packet_listener(void *arg)
 
     switch (p.type)
     {
+    case packet_type::SYNC_DIR_ACCEPT_RESP:
+    {
+      if (p.total_size > 0)
+      {
+        sync_manager->ignore();
+        serialized_file_t sf = File::from_data(p._payload);
+        File write_file(sf);
+        std::string path = base_path + sync_dir;
+        if (write_file.write_file(path) < 0)
+        {
+          printf("Local: Failed to sync file " + write_file.filename + "\n");
+        }
+        if(p.seqn = p.total_size)
+        {
+          
+          std::string out, filename, _meta;
+          int total_files = file_manager.list_directory(path, out);
+          std::stringstream cfs; sfs << out;
+          if(total_files > 0)
+          {
+              int curr_file = 1;
+              while(cfs.rdbuf()->in_avail() > 0)
+              {
+                  std::getline(cfs, filename);
+                  std::getline(cfs, _meta);
+                  std::string filepath = path + "/" + filename;
+                  File *file;
+                  int err = file->read_file(path);
+                  packet p = connection->build_packet_sized(packet_type::UPLOAD_REQ, 0, 0, file->get_payload_size(), file->to_data);
+                  curr_file += 1;
+                  connection->write_packet(&p);
+              }
+          }
+          else
+          {
+              printf("Local: No files to sync\n");
+          }
+        }
+      }
+    }
     case packet_type::DELETE_ACCEPT_RESP:
     {
       std::string file = base_path + sync_dir + "/" + p._payload;
@@ -59,13 +101,10 @@ void *packet_listener(void *arg)
     }
     case packet_type::DOWNLOAD_ACCEPT_RESP:
     {
-      printf("attempting to download payload %s\n", p._payload + sizeof(int));
-
       serialized_file_t sf = File::from_data(p._payload);
       File write_file(sf);
       printf("Received: %s\n", write_file.filename.c_str());
-      std::string path = base_path + sync_dir;
-      if (write_file.write_file(path) < 0)
+      if (write_file.write_file(base_path) < 0)
       {
         printf("Local: Failed writing received file\n");
       }
@@ -82,7 +121,6 @@ void *packet_listener(void *arg)
     case packet_type::UPLOAD_BROADCAST:
     {
       sync_manager->ignore();
-      printf("attempting to download payload %s\n", p._payload + sizeof(int));
 
       serialized_file_t sf = File::from_data(p._payload);
       File write_file(sf);
@@ -155,7 +193,7 @@ int main(int argc, char *argv[])
   pthread_create(&input_thread_id, NULL, InputManager::thread_ready, &inman_input);
 
 
-  packet_listener_input_t in = {&client_soc, &sync_manager};
+  packet_listener_input_t in = {&client_soc, &sync_manager, &input_manager};
   pthread_t packet_listener_thread_id = 0;
   pthread_create(&packet_listener_thread_id, NULL, packet_listener, &in);
 
