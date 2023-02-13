@@ -11,7 +11,7 @@
 #include "../controllers/delete_controller.hpp"
 #include "../../../commons/ui/cli_types.hpp"
 #include "../../../commons/ui/ui_template.hpp"
-
+#include "../../../commons/packet.hpp"
 
 #define MAX_CONNECTIONS_PER_USER 2
 #define SYNC_DIRS_BASE_PATH "./sync_directories"
