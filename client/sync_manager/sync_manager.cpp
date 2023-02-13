@@ -85,7 +85,7 @@ void SyncManager::run()
                 size = event->len;
                 message = (char *)event->name;
             }
-            else if (event->mask & IN_MODIFY)
+            /*else if (event->mask & IN_MODIFY)
             {
                 p_type = packet_type::UPLOAD_REQ;
                 File f = File(event->name);
@@ -94,7 +94,7 @@ void SyncManager::run()
                 f.read_file(sync_dir);
                 size = f.get_payload_size();
                 message = f.to_data();
-            }
+            }*/
             else if (event->mask & IN_CREATE)
             {
                 p_type = packet_type::UPLOAD_REQ;
