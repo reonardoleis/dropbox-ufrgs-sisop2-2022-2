@@ -152,14 +152,14 @@ void *Manager::handle_connection(void *input)
         SyncController sync_controller = SyncController(in->manager->server_file_manager);
         int err = sync_controller.sync_dir(username);
 
-        uint16_t packet_type = 0;
+        uint16_t p_type = 0;
         std::string message = "";
         if (err < 0)
         {
             logger.stamp().set("error syncing directory for user " + username).error();
-            packet_type = packet_type::SYNC_DIR_REFUSE_RESP;
+            p_type = packet_type::SYNC_DIR_REFUSE_RESP;
             message = "error syncing directory";
-            packet p = connection->build_packet(packet_type, 0, 0, message.c_str());
+            packet p = connection->build_packet(p_type, 0, 0, message.c_str());
             connection->write_packet(&p);
         }
         else
@@ -172,9 +172,9 @@ void *Manager::handle_connection(void *input)
             else
             {
                 logger.stamp().set("successfully created directory for user " + username).info();
-                packet_type = packet_type::SYNC_DIR_ACCEPT_RESP;
+                p_type = packet_type::SYNC_DIR_ACCEPT_RESP;
                 message = "successfully synced directory";
-                packet p = connection->build_packet(packet_type, 0, 0, message.c_str());
+                packet p = connection->build_packet(p_type, 0, 0, message.c_str());
                 connection->write_packet(&p);
             }
         }
