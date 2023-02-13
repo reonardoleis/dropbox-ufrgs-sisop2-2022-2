@@ -34,17 +34,12 @@ int FileManager::list_directory(std::string &path, std::string &out)
     struct dirent *ent;
     struct stat attr;
     out += "\n";
-    bool empty = true;
     int count = 0;
     //std::vector<std::string> unordered_files;
     if ((dir = opendir (path.c_str())) != NULL) {
         while ((ent = readdir (dir)) != NULL) {
             if (ent->d_type == DT_REG) {
                 stat(ent->d_name, &attr);
-                if(S_ISREG(attr.st_mode))
-                {
-                    empty = false;
-                }
                 std::string creation = ctime((const time_t *)&attr.st_ctim);
                 std::string modification = ctime((const time_t *)&attr.st_mtim);
                 std::string access = ctime((const time_t *)&attr.st_atim);
@@ -55,9 +50,9 @@ int FileManager::list_directory(std::string &path, std::string &out)
                 
             }
         }
-        if(empty)
+        if(out.length() < 5)
         {
-            out = "Empty folder";
+            out = "Empty folder\n";
         }
         else
         {

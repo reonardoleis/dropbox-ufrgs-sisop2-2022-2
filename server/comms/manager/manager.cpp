@@ -379,20 +379,33 @@ void Manager::sync_files(std::string username, Socket *connection)
     DownloadController download_controller = DownloadController();
     cli_logger logger = cli_logger(frontend.get_log_stream());
     std::string out, filename, _meta;
-    std::string user_path = "/sync_dir_" + username;
+    char cCurrentPath[FILENAME_MAX];
+    if (!getcwd(cCurrentPath, sizeof(cCurrentPath)))
+    {
+        logger.set("Failed to get running directory: ERRNO " + std::to_string(errno)).stamp().error();
+        exit(-1);
+    }
+    std::string b = std::string(cCurrentPath);
+    std::string user_path = std::string(b + "/sync_directories/sync_dir_"+username+"/");
+    //std::string user_path = "/sync_dir_" + username;
     int total_files = this->server_file_manager.list_directory(user_path, out);
-    logger.set(out).stamp().error();
+    
+    //printf("OUT: %s", out.c_str());
     std::stringstream sfs; sfs << out;
     if(total_files > 0)
     {
         int curr_file = 1;
+        std::getline(sfs, _meta);
         while(sfs.rdbuf()->in_avail() > 0)
         {
             std::getline(sfs, filename);
-            std::getline(sfs, _meta);
+            for(int i = 0; i < 4; i++){std::getline(sfs, _meta);}
             File *file;
             int err = download_controller.download(&file, filename, username);
-            packet p = connection->build_packet_sized(packet_type::SYNC_DIR_ACCEPT_RESP, curr_file, total_files, file->get_payload_size(), file->to_data());
+            uint32_t size = file->get_payload_size();
+            logger.set(file->filename).stamp().error();
+            char *payload = file->to_data();
+            packet p = connection->build_packet_sized(packet_type::SYNC_DIR_ACCEPT_RESP, curr_file, total_files, size, payload);
             curr_file += 1;
             connection->write_packet(&p);
         }

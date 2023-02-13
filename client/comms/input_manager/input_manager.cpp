@@ -176,6 +176,7 @@ void InputManager::run()
             remote = false;
             std::string out;
             std::string path = base_path + sync_dir;
+            printf("PATH: %s\n", path.c_str());
             if(file_manager.list_directory(path, out) == -1)
             {
                 printf("Failed to list directory\n");

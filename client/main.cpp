@@ -47,7 +47,7 @@ void *packet_listener(void *arg)
 
     packet p = client_soc->read_packet();
 
-    printf("type: %d\nlength: %d\nPayload: %s\n", p.type, p.length, p._payload);
+    //printf("type: %d\nlength: %d\nPayload: %s\n", p.type, p.length, p._payload);
 
     switch (p.type)
     {
@@ -59,11 +59,12 @@ void *packet_listener(void *arg)
         serialized_file_t sf = File::from_data(p._payload);
         File write_file(sf);
         std::string path = base_path + sync_dir;
+        printf("SYNC FILE %d\n", p.seqn);
         if (write_file.write_file(path) < 0)
         {
           printf("Local: Failed to sync file %s\n", write_file.filename.c_str());
         }
-        if(p.seqn = p.total_size)
+        if(p.seqn == p.total_size)
         {
           
           std::string out, filename, _meta;
@@ -71,25 +72,27 @@ void *packet_listener(void *arg)
           std::stringstream cfs; cfs << out;
           if(total_files > 0)
           {
-              int curr_file = 1;
-              while(cfs.rdbuf()->in_avail() > 0)
-              {
-                  std::getline(cfs, filename);
-                  std::getline(cfs, _meta);
-                  std::string filepath = path + "/" + filename;
-                  File *file;
-                  int err = file->read_file(path);
-                  packet p = client_soc->build_packet_sized(packet_type::UPLOAD_REQ, 0, 0, file->get_payload_size(), file->to_data());
-                  curr_file += 1;
-                  client_soc->write_packet(&p);
-              }
+            int curr_file = 1;
+            std::getline(cfs, _meta);
+            while(cfs.rdbuf()->in_avail() > 0)
+            {
+              std::getline(cfs, filename);
+              for(int i = 0; i < 4; i++){std::getline(cfs, _meta);}
+              std::string filepath = path + "/" + filename;
+              File file(filename);
+              int err = file.read_file(path);
+              packet p = client_soc->build_packet_sized(packet_type::UPLOAD_REQ, 0, 0, file.get_payload_size(), file.to_data());
+              curr_file += 1;
+              client_soc->write_packet(&p);
+            }
           }
           else
           {
-              printf("Local: No files to sync\n");
+            printf("Local: No files to sync\n");
           }
         }
       }
+      break;
     }
     case packet_type::DELETE_ACCEPT_RESP:
     {
