@@ -19,7 +19,7 @@ int FileManager::create_directory(std::string &path)
 
     std::string full_path = this->base_path + path;
     int err = mkdir(full_path.c_str(), 0777);
-    printf("MKDIR: %d | %d | %s\n", err, errno, full_path.c_str());
+    //printf("MKDIR: %d | %d | %s\n", err, errno, full_path.c_str());
     return errno == EEXIST ? 1 : err;
 }
 
@@ -39,33 +39,34 @@ int FileManager::list_directory(std::string &path, std::string &out)
     if ((dir = opendir (path.c_str())) != NULL) {
         while ((ent = readdir (dir)) != NULL) {
             if (ent->d_type == DT_REG) {
-                stat(ent->d_name, &attr);
-                std::string creation = ctime((const time_t *)&attr.st_ctim);
-                std::string modification = ctime((const time_t *)&attr.st_mtim);
-                std::string access = ctime((const time_t *)&attr.st_atim);
+                stat(ent->d_name, &attr);   
+                char * tmp = ctime((const time_t *)&attr.st_ctim);
+                std::string creation = tmp == NULL ? "\n" : tmp ;
+                tmp = ctime((const time_t *)&attr.st_mtim);
+                std::string modification = tmp == NULL ? "\n" : tmp ;
+                tmp = ctime((const time_t *)&attr.st_atim);
+                std::string access = tmp == NULL ? "\n" : tmp ;
                 //unordered_files.push_back(std::string(ent->d_name) + "\n\tCreated  at " + creation + "\tModified at " + modification + "\tAccessed at " + access + "\n");
                 count += 1;
                 out += std::string(ent->d_name) + "\n"; 
-                out += "\tCreated  at " + creation + "\tModified at " + modification + "\tAccessed at " + access + "\n";
-                
+                out += "\tCreated  at " + creation + "\tModified at " + modification + "\tAccessed at " + access + "\n";   
             }
         }
         if(out.length() < 5)
         {
             out = "Empty folder\n";
         }
-        else
+        /*else
         {
-            /*std::sort(unordered_files.begin(), unordered_files.end());
+            std::sort(unordered_files.begin(), unordered_files.end());
             for (std::string file : unordered_files)
             {
                 out += file;
-            }*/
-        }
+            }
+        }*/
         closedir (dir);
     } else {
         return -1;
     }
-
     return count;
 } 

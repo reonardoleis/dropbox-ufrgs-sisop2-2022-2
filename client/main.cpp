@@ -59,7 +59,6 @@ void *packet_listener(void *arg)
         serialized_file_t sf = File::from_data(p._payload);
         File write_file(sf);
         std::string path = base_path + sync_dir;
-        printf("SYNC FILE %d\n", p.seqn);
         if (write_file.write_file(path) < 0)
         {
           printf("Local: Failed to sync file %s\n", write_file.filename.c_str());
@@ -150,6 +149,11 @@ void *packet_listener(void *arg)
     case packet_type::DOWNLOAD_REFUSE_RESP:
     {
       printf("Received: %s\n", p._payload);
+      break;
+    }
+    case packet_type::LIST_ACCEPT_RESP:
+    {
+      printf("Received: %s", p._payload);
       break;
     }
     default:

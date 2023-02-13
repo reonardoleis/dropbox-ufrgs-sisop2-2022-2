@@ -44,12 +44,12 @@ void SyncManager::run()
         char *message = NULL;
         uint16_t p_type = -1;
         int len = 0;
+        bzero(buffer, 4096);
         while ((len <= 0) && !this->get_stop())
         {
             len = read(this->fd, buffer, sizeof(buffer));
             if (len == -1 && errno != EAGAIN)
             {
-                printf("AQUI ERRO\n");
                 exit(EXIT_FAILURE);
             }
             usleep(100);
@@ -63,10 +63,8 @@ void SyncManager::run()
         {
             size = 0;
             event = (const struct inotify_event *)ptr;
-            printf("EVENT MASK: %x\n", event->mask);
             if (event->mask & IN_MOVED_TO)
             {
-                printf("NOTIFY CREATE\n");
                 p_type = packet_type::UPLOAD_REQ;
                 File f = File(event->name);
                 std::string base_path = std::string(cCurrentPath);
@@ -83,14 +81,12 @@ void SyncManager::run()
             }
             else if (event->mask & IN_DELETE)
             {
-                printf("NOTIFY DELETE\n");
                 p_type = packet_type::DELETE_REQ;
                 size = event->len;
                 message = (char *)event->name;
             }
             else if (event->mask & IN_MODIFY)
             {
-                printf("NOTIFY MODIFY\n");
                 p_type = packet_type::UPLOAD_REQ;
                 File f = File(event->name);
                 std::string base_path = std::string(cCurrentPath);
@@ -101,7 +97,6 @@ void SyncManager::run()
             }
             else if (event->mask & IN_CREATE)
             {
-                printf("NOTIFY CREATE\n");
                 p_type = packet_type::UPLOAD_REQ;
                 File f = File(event->name);
                 std::string base_path = std::string(cCurrentPath);
@@ -112,7 +107,6 @@ void SyncManager::run()
             }
             else if (event->mask & IN_CLOSE_WRITE)
             {
-                printf("NOTIFY MODIFY\n");
                 p_type = packet_type::UPLOAD_REQ;
                 File f = File(event->name);
                 std::string base_path = std::string(cCurrentPath);
@@ -126,7 +120,6 @@ void SyncManager::run()
             {
                 if (!this->get_should_ignore())
                 {
-                    printf("NOTIFY PACKET: %d | %s\n", size, event->name);
                     packet p = this->client_soc->build_packet_sized(p_type, 0, 0, size, message);
                     this->set_packet(&p);
                 }

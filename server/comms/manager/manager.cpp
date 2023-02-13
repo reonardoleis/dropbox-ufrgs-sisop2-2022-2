@@ -279,9 +279,18 @@ void *Manager::handle_connection(void *input)
         SyncController sync_controller = SyncController(in->manager->server_file_manager);
         cli_logger logger = cli_logger(frontend.get_log_stream());
         logger.set("listing files for user " + username).stamp().info();
-       
+        char cCurrentPath[FILENAME_MAX];
+        if (!getcwd(cCurrentPath, sizeof(cCurrentPath)))
+        {
+            logger.set("Failed to get running directory: ERRNO " + std::to_string(errno)).stamp().error();
+            return NULL;
+        }
+        std::string base = std::string(cCurrentPath);
+        std::string path = std::string(base + "/sync_directories/sync_dir_" + username);
         std::string files = "";
-        int err = sync_controller.list_sync_dir(username, files);
+        int err = in->manager->server_file_manager.list_directory(path, files);
+        logger.set("listing files for user " + username).stamp().info();
+        usleep(100);
         std::string message = "";
         int p_type = 0;
         int size = 0;
@@ -299,6 +308,7 @@ void *Manager::handle_connection(void *input)
             p_type = packet_type::LIST_ACCEPT_RESP;
             message = files;
             size = files.length();
+            logger.set("successfully listed files for user " + message).stamp().info();
         }
 
         packet p = connection->build_packet_sized(p_type, 0, 0, size + 1, message.c_str());
@@ -403,8 +413,8 @@ void Manager::sync_files(std::string username, Socket *connection)
             File *file;
             int err = download_controller.download(&file, filename, username);
             uint32_t size = file->get_payload_size();
-            logger.set(file->filename).stamp().error();
             char *payload = file->to_data();
+            logger.set(file->filename).stamp().warning();
             packet p = connection->build_packet_sized(packet_type::SYNC_DIR_ACCEPT_RESP, curr_file, total_files, size, payload);
             curr_file += 1;
             connection->write_packet(&p);

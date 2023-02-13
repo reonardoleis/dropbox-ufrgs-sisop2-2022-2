@@ -20,9 +20,11 @@ int SyncController::list_sync_dir(std::string &username, std::string &out) {
         return -1;
     }
     std::string b = std::string(cCurrentPath);
-    std::string p = std::string(b + "/sync_directories/sync_dir_"+username+"/");
+    std::string p = std::string(b + "/sync_directories/sync_dir_" + username);
 
-    log.set("listing directory " + p).stamp().info();
-   
-    return this->file_manager.list_directory(p, out);
+    std::string ref_p = p, ref_out = out;
+    log.set("listing directory " + p + out).stamp().info();
+    int ret = this->file_manager.list_directory(ref_p, ref_out);
+    log.set("listing directory " + p + ref_out).stamp().info();
+    return ret;
 }

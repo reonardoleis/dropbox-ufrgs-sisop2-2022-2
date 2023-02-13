@@ -79,13 +79,14 @@ void InputManager::run()
         printf("Local: sync_dir created or already existed\n");
         packet lr = client_soc->build_packet_sized(packet_type::SYNC_DIR_REQ, 0, 0, 1, "");
         this->set_packet(&lr);
+        std::string watch_path = base_path + sync_dir;
+        this->sync_manager->watch(watch_path);
     }
 
 
     while (running) {
         uint16_t _packet_type = -1;
 
-        printf("Enter the command: ");
         command = "";
         arg = "";
         int size = 1;
@@ -176,7 +177,6 @@ void InputManager::run()
             remote = false;
             std::string out;
             std::string path = base_path + sync_dir;
-            printf("PATH: %s\n", path.c_str());
             if(file_manager.list_directory(path, out) == -1)
             {
                 printf("Failed to list directory\n");
