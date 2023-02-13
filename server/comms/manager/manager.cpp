@@ -423,6 +423,8 @@ void Manager::sync_files(std::string username, Socket *connection)
     else
     {
         logger.set("No files to sync").stamp().warning();
+        packet p = connection->build_packet_sized(packet_type::SYNC_DIR_ACCEPT_RESP, 0, 0, 1, "");
+        connection->write_packet(&p);
     }
 }
 
