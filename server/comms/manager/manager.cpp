@@ -227,7 +227,7 @@ void *Manager::handle_connection(void *input)
         uint32_t size = file.get_payload_size();
         packet broadcast_packet = connection->build_packet_sized(packet_type::UPLOAD_BROADCAST, 0, 0, size, file_bytes);
         err = in->manager->broadcast_to_user(username, -1, &broadcast_packet);
-        logger.set("here " + username).stamp().info();
+        logger.set("Broadcasting for " + username).stamp().info();
         break;
     }
     case packet_type::DOWNLOAD_REQ:
