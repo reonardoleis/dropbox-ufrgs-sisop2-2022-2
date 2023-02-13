@@ -25,15 +25,22 @@ typedef struct packet_listener_input_t {
 
 void *packet_listener(void *arg)
 {
-
-  std::string base_path = "./";
-  std::string sync_dir = "/sync_dir";
-  FileManager file_manager;
-
   packet_listener_input_t *in = (packet_listener_input_t*) arg;
   ClientSocket *client_soc = in->client_soc;
   SyncManager *sync_manager = in->sync_manager;
   InputManager *input_manager = in->input_manager;
+
+  char cCurrentPath[FILENAME_MAX];
+  if (!getcwd(cCurrentPath, sizeof(cCurrentPath)))
+  {
+      printf("Failed to get running directory: ERRNO %d\n", errno);
+      return NULL;
+  }
+  std::string base_path = cCurrentPath;
+  std::string sync_dir = "/sync_dir";
+  FileManager file_manager;
+
+  
 
   while (!input_manager->is_done())
   {
@@ -54,14 +61,14 @@ void *packet_listener(void *arg)
         std::string path = base_path + sync_dir;
         if (write_file.write_file(path) < 0)
         {
-          printf("Local: Failed to sync file " + write_file.filename + "\n");
+          printf("Local: Failed to sync file %s\n", write_file.filename.c_str());
         }
         if(p.seqn = p.total_size)
         {
           
           std::string out, filename, _meta;
           int total_files = file_manager.list_directory(path, out);
-          std::stringstream cfs; sfs << out;
+          std::stringstream cfs; cfs << out;
           if(total_files > 0)
           {
               int curr_file = 1;
@@ -72,9 +79,9 @@ void *packet_listener(void *arg)
                   std::string filepath = path + "/" + filename;
                   File *file;
                   int err = file->read_file(path);
-                  packet p = connection->build_packet_sized(packet_type::UPLOAD_REQ, 0, 0, file->get_payload_size(), file->to_data);
+                  packet p = client_soc->build_packet_sized(packet_type::UPLOAD_REQ, 0, 0, file->get_payload_size(), file->to_data());
                   curr_file += 1;
-                  connection->write_packet(&p);
+                  client_soc->write_packet(&p);
               }
           }
           else
@@ -148,6 +155,7 @@ void *packet_listener(void *arg)
     }
     }
   }
+  return NULL;
 }
 
 int main(int argc, char *argv[])

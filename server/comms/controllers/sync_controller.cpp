@@ -12,8 +12,15 @@ int SyncController::sync_dir(std::string &path) {
 }
 
 int SyncController::list_sync_dir(std::string &username, std::string &out) {
-    std::string p = std::string("./sync_directories/sync_dir_"+username+"/");
     cli_logger log = cli_logger(frontend.get_log_stream());
+    char cCurrentPath[FILENAME_MAX];
+    if (!getcwd(cCurrentPath, sizeof(cCurrentPath)))
+    {
+        log.set("Failed to get running directory: ERRNO " + std::to_string(errno)).stamp().error();
+        return -1;
+    }
+    std::string b = std::string(cCurrentPath);
+    std::string p = std::string(b + "/sync_directories/sync_dir_"+username+"/");
 
     log.set("listing directory " + p).stamp().info();
    

@@ -166,8 +166,8 @@ void *Manager::handle_connection(void *input)
         {
             if(err == 1)
             {
-                logger.stamp().set("sync_directory for user " + username + "already exists").info();
-                this->sync_files(username, connection);
+                logger.stamp().set("sync_directory for user " + username + " already exists").info();
+                in->manager->sync_files(username, connection);
             }
             else
             {
@@ -301,7 +301,7 @@ void *Manager::handle_connection(void *input)
             size = files.length();
         }
 
-        packet p = connection->build_packet_sized(p_type, 0, 0, size, message.c_str());
+        packet p = connection->build_packet_sized(p_type, 0, 0, size + 1, message.c_str());
         connection->write_packet(&p);
         break;
     }
@@ -381,6 +381,7 @@ void Manager::sync_files(std::string username, Socket *connection)
     std::string out, filename, _meta;
     std::string user_path = "/sync_dir_" + username;
     int total_files = this->server_file_manager.list_directory(user_path, out);
+    logger.set(out).stamp().error();
     std::stringstream sfs; sfs << out;
     if(total_files > 0)
     {
@@ -391,7 +392,7 @@ void Manager::sync_files(std::string username, Socket *connection)
             std::getline(sfs, _meta);
             File *file;
             int err = download_controller.download(&file, filename, username);
-            packet p = connection->build_packet_sized(packet_type::SYNC_DIR_ACCEPT_RESP, curr_file, total_files, file->get_payload_size(), file->to_data);
+            packet p = connection->build_packet_sized(packet_type::SYNC_DIR_ACCEPT_RESP, curr_file, total_files, file->get_payload_size(), file->to_data());
             curr_file += 1;
             connection->write_packet(&p);
         }

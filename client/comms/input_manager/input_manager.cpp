@@ -72,7 +72,7 @@ void InputManager::run()
     
     if(file_manager.create_directory(sync_dir) < 0)
     {
-        printf("Local: Failed to create local sync_dir %s\n", );
+        printf("Local: Failed to create local sync_dir\n");
     }
     else
     {
@@ -209,7 +209,7 @@ void * InputManager::thread_ready(void * manager)
 }
 
 
-void InputManager::set_slist(std::string s)
+/*void InputManager::set_slist(std::string s)
 {
     this->list_lock.lock();
     this->server_list = s;
@@ -228,7 +228,7 @@ void InputManager::wait_slist()
 }
 void InputManager::post_slist()
 {
-    sem_post(&list_sem)
+    sem_post(&list_sem);
 }
 
 
@@ -312,4 +312,4 @@ int verify_sync(std::string server_files, std::string client_files, std::string 
         out = "";
         return sync_type::SYNCED;
     }
-}
+}*/

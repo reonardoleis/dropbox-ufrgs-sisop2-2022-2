@@ -36,7 +36,7 @@ int FileManager::list_directory(std::string &path, std::string &out)
     out += "\n";
     bool empty = true;
     int count = 0;
-    std::vector<std::string> unordered_files;
+    //std::vector<std::string> unordered_files;
     if ((dir = opendir (path.c_str())) != NULL) {
         while ((ent = readdir (dir)) != NULL) {
             if (ent->d_type == DT_REG) {
@@ -48,10 +48,10 @@ int FileManager::list_directory(std::string &path, std::string &out)
                 std::string creation = ctime((const time_t *)&attr.st_ctim);
                 std::string modification = ctime((const time_t *)&attr.st_mtim);
                 std::string access = ctime((const time_t *)&attr.st_atim);
-                unordered_files.insert(std::string(ent->d_name) + "\n\tCreated  at " + creation + "\tModified at " + modification + "\tAccessed at " + access + "\n")
+                //unordered_files.push_back(std::string(ent->d_name) + "\n\tCreated  at " + creation + "\tModified at " + modification + "\tAccessed at " + access + "\n");
                 count += 1;
-                //out += std::string(ent->d_name) + "\n"; 
-                //out += "\tCreated  at " + creation + "\tModified at " + modification + "\tAccessed at " + access + "\n";
+                out += std::string(ent->d_name) + "\n"; 
+                out += "\tCreated  at " + creation + "\tModified at " + modification + "\tAccessed at " + access + "\n";
                 
             }
         }
@@ -61,11 +61,11 @@ int FileManager::list_directory(std::string &path, std::string &out)
         }
         else
         {
-            std::sort(unordered_files.begin(), unordered_files.end());
+            /*std::sort(unordered_files.begin(), unordered_files.end());
             for (std::string file : unordered_files)
             {
                 out += file;
-            }
+            }*/
         }
         closedir (dir);
     } else {
