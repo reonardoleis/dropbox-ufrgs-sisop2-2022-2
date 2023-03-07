@@ -9,6 +9,10 @@ ServerSocket::ServerSocket(int port, int queue_size)
 {   
     this->is_waiting = false;
     cli_logger logger = cli_logger(frontend.get_log_stream());
+    std::signal(SocketError::READ_HEADER_ERROR, ServerSocket::error_handler);
+    std::signal(SocketError::READ_PAYLOAD_ERROR, ServerSocket::error_handler);
+    std::signal(SocketError::BIND_ERROR, ServerSocket::error_handler);
+    std::signal(SocketError::WRITE_ERROR, ServerSocket::error_handler);
     std::signal(SocketError::CONNECT_ERROR, ServerSocket::error_handler);
     this->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)

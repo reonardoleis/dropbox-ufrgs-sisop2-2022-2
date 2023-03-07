@@ -4,6 +4,11 @@
 
 ClientSocket::ClientSocket(const char* server_address, int server_port)
 {
+    std::signal(SocketError::READ_HEADER_ERROR, ClientSocket::error_handler);
+    std::signal(SocketError::READ_PAYLOAD_ERROR, ClientSocket::error_handler);
+    std::signal(SocketError::WRITE_ERROR, ClientSocket::error_handler);
+    std::signal(SocketError::CONNECT_ERROR, ClientSocket::error_handler);
+
     this->is_waiting = false;
     bzero(this->buffer, HEADER_SIZE);
     if ((this->sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 

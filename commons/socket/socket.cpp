@@ -36,7 +36,9 @@ packet Socket::read_packet()
     while(n < HEADER_SIZE) {
         bytes = read(this->sockfd, this->buffer + n, HEADER_SIZE - n);
         if (bytes == 0)
+        {
             std::raise(SocketError::READ_HEADER_ERROR);
+        }
         n += bytes;
     }
 
