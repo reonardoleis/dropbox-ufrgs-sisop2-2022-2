@@ -185,7 +185,7 @@ void *Manager::handle_connection(void *input)
     {
         logger.set("Server stopped by network request").stamp().warning();
         packet p = connection->build_packet(packet_type::STOP_SERVER_BROADCAST, 0, 0, "server stopped");
-        connection->write_packet(&p);
+        //connection->write_packet(&p);
         in->manager->broadcast(&p);
 
         usleep(100);
@@ -372,6 +372,7 @@ int Manager::broadcast_to_user(std::string username, int except_socketfd, packet
     User user = this->users[username];
     Socket *connections = user.get_connections();
     int active_connections_count = user.get_active_connections_count();
+    logger.set(std::string("Closing ") + std::to_string(active_connections_count) + std::string(" connections for user") + username).stamp().warning();
 
     for (int i = 0; i < active_connections_count; i++)
     {

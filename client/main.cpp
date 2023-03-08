@@ -42,134 +42,135 @@ void *packet_listener(void *arg)
 
   while (!input_manager->is_done())
   {
-
+    packet *p_temp = NULL;
     try
     {
-      packet p = client_soc->read_packet();
-      // printf("type: %d\nlength: %d\nPayload: %s\n", p.type, p.length, p._payload);
-
-      switch (p.type)
-      {
-      case packet_type::SYNC_DIR_ACCEPT_RESP:
-      {
-        if (p.total_size > 0)
-        {
-          sync_manager->ignore();
-          serialized_file_t sf = File::from_data(p._payload);
-          File write_file(sf);
-          std::string path = base_path + sync_dir;
-          if (write_file.write_file(path) < 0)
-          {
-            printf("Local: Failed to sync file %s\n", write_file.filename.c_str());
-          }
-          if (p.seqn == p.total_size)
-          {
-
-            std::string out, filename, _meta;
-            int total_files = file_manager.list_directory(path, out);
-            std::stringstream cfs;
-            cfs << out;
-            if (total_files > 0)
-            {
-              int curr_file = 1;
-              std::getline(cfs, _meta);
-              while (cfs.rdbuf()->in_avail() > 0)
-              {
-                std::getline(cfs, filename);
-                for (int i = 0; i < 4; i++)
-                {
-                  std::getline(cfs, _meta);
-                }
-                std::string filepath = path + "/" + filename;
-                File file(filename);
-                int err = file.read_file(path);
-                packet p = client_soc->build_packet_sized(packet_type::UPLOAD_REQ, 0, 0, file.get_payload_size(), file.to_data());
-                curr_file += 1;
-                client_soc->write_packet(&p);
-              }
-            }
-            else
-            {
-              printf("Local: No files to sync\n");
-            }
-          }
-        }
-        break;
-      }
-      case packet_type::DELETE_ACCEPT_RESP:
-      {
-        std::string file = base_path + sync_dir + "/" + p._payload;
-        printf("Received: successfully deleted %s\n", p._payload);
-        if (remove(file.c_str()) < 0)
-        {
-          printf("Local: Failed to remove file\n");
-        }
-        else
-        {
-          printf("Local: Successfully removed file\n");
-        }
-
-        break;
-      }
-      case packet_type::DOWNLOAD_ACCEPT_RESP:
-      {
-        serialized_file_t sf = File::from_data(p._payload);
-        File write_file(sf);
-        printf("Received: %s\n", write_file.filename.c_str());
-        if (write_file.write_file(base_path) < 0)
-        {
-          printf("Local: Failed writing received file\n");
-        }
-        break;
-      }
-      case packet_type::DELETE_BROADCAST:
-      {
-        sync_manager->ignore();
-        std::string file = base_path + sync_dir + "/" + p._payload;
-        remove(file.c_str());
-        printf("Local: deleted %s (delete broadcast)\n", p._payload);
-        break;
-      }
-      case packet_type::UPLOAD_BROADCAST:
-      {
-        sync_manager->ignore();
-
-        serialized_file_t sf = File::from_data(p._payload);
-        File write_file(sf);
-        printf("Received: %s\n", write_file.filename.c_str());
-        std::string path = base_path + sync_dir;
-        if (write_file.write_file(path) < 0)
-        {
-          printf("Local: Failed writing received file\n");
-        }
-        break;
-      }
-      case packet_type::DELETE_REFUSE_RESP:
-      {
-        printf("Received: failed to delete file\n");
-        break;
-      }
-      case packet_type::DOWNLOAD_REFUSE_RESP:
-      {
-        printf("Received: %s\n", p._payload);
-        break;
-      }
-      case packet_type::LIST_ACCEPT_RESP:
-      {
-        printf("Received: %s", p._payload);
-        break;
-      }
-      default:
-      {
-        printf("Received: %s\n", p._payload);
-      }
-      }
+      p_temp = new packet(client_soc->read_packet());
     }
     catch (SocketError e)
     {
       printf("Error while reading packet. Trying to reconnect in 5 seconds...\n");
       sleep(5);
       continue;
+    }
+    packet p = *p_temp;
+    // printf("type: %d\nlength: %d\nPayload: %s\n", p.type, p.length, p._payload);
+
+    switch (p.type)
+    {
+    case packet_type::SYNC_DIR_ACCEPT_RESP:
+    {
+      if (p.total_size > 0)
+      {
+        sync_manager->ignore();
+        serialized_file_t sf = File::from_data(p._payload);
+        File write_file(sf);
+        std::string path = base_path + sync_dir;
+        if (write_file.write_file(path) < 0)
+        {
+          printf("Local: Failed to sync file %s\n", write_file.filename.c_str());
+        }
+        if (p.seqn == p.total_size)
+        {
+
+          std::string out, filename, _meta;
+          int total_files = file_manager.list_directory(path, out);
+          std::stringstream cfs;
+          cfs << out;
+          if (total_files > 0)
+          {
+            int curr_file = 1;
+            std::getline(cfs, _meta);
+            while (cfs.rdbuf()->in_avail() > 0)
+            {
+              std::getline(cfs, filename);
+              for (int i = 0; i < 4; i++)
+              {
+                std::getline(cfs, _meta);
+              }
+              std::string filepath = path + "/" + filename;
+              File file(filename);
+              int err = file.read_file(path);
+              packet p = client_soc->build_packet_sized(packet_type::UPLOAD_REQ, 0, 0, file.get_payload_size(), file.to_data());
+              curr_file += 1;
+              client_soc->write_packet(&p);
+            }
+          }
+          else
+          {
+            printf("Local: No files to sync\n");
+          }
+        }
+      }
+      break;
+    }
+    case packet_type::DELETE_ACCEPT_RESP:
+    {
+      std::string file = base_path + sync_dir + "/" + p._payload;
+      printf("Received: successfully deleted %s\n", p._payload);
+      if (remove(file.c_str()) < 0)
+      {
+        printf("Local: Failed to remove file\n");
+      }
+      else
+      {
+        printf("Local: Successfully removed file\n");
+      }
+
+      break;
+    }
+    case packet_type::DOWNLOAD_ACCEPT_RESP:
+    {
+      serialized_file_t sf = File::from_data(p._payload);
+      File write_file(sf);
+      printf("Received: %s\n", write_file.filename.c_str());
+      if (write_file.write_file(base_path) < 0)
+      {
+        printf("Local: Failed writing received file\n");
+      }
+      break;
+    }
+    case packet_type::DELETE_BROADCAST:
+    {
+      sync_manager->ignore();
+      std::string file = base_path + sync_dir + "/" + p._payload;
+      remove(file.c_str());
+      printf("Local: deleted %s (delete broadcast)\n", p._payload);
+      break;
+    }
+    case packet_type::UPLOAD_BROADCAST:
+    {
+      sync_manager->ignore();
+
+      serialized_file_t sf = File::from_data(p._payload);
+      File write_file(sf);
+      printf("Received: %s\n", write_file.filename.c_str());
+      std::string path = base_path + sync_dir;
+      if (write_file.write_file(path) < 0)
+      {
+        printf("Local: Failed writing received file\n");
+      }
+      break;
+    }
+    case packet_type::DELETE_REFUSE_RESP:
+    {
+      printf("Received: failed to delete file\n");
+      break;
+    }
+    case packet_type::DOWNLOAD_REFUSE_RESP:
+    {
+      printf("Received: %s\n", p._payload);
+      break;
+    }
+    case packet_type::LIST_ACCEPT_RESP:
+    {
+      printf("Received: %s", p._payload);
+      break;
+    }
+    default:
+    {
+      printf("Received: %s\n", p._payload);
+    }
     }
   }
   return NULL;

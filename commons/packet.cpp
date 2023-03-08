@@ -5,7 +5,10 @@
 
 packet::~packet() {
     if (this->_payload != NULL)
+    {
         free(this->_payload);
+        this->_payload = NULL;
+    }
 }
 
 packet::packet(const packet &p) {
