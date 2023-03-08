@@ -93,7 +93,7 @@ ServerSocket ServerSocket::accept_connection()
     if (newsockfd < 0)
     {
         logger.set("Failed to accept connection").stamp().error();
-        std::raise(SocketError::CONNECT_ERROR);
+        throw SocketError::CONNECT_ERROR;
     }
 
     logger.set("Connection accepted").stamp().info();

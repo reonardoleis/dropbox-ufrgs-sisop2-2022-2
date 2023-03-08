@@ -37,7 +37,7 @@ packet Socket::read_packet()
         bytes = read(this->sockfd, this->buffer + n, HEADER_SIZE - n);
         if (bytes == 0)
         {
-            std::raise(SocketError::READ_HEADER_ERROR);
+            throw SocketError::READ_HEADER_ERROR;
         }
         n += bytes;
     }
@@ -52,7 +52,7 @@ packet Socket::read_packet()
     while(n < p.length) {
        bytes = read(this->sockfd, p._payload + n, p.length - n);
         if (bytes == 0)
-            std::raise(SocketError::READ_PAYLOAD_ERROR);
+            throw SocketError::READ_PAYLOAD_ERROR;
         n += bytes;
     }
 
@@ -69,7 +69,7 @@ int Socket::write_packet(packet *p)
     int n = write(this->sockfd, packet_bytes, HEADER_SIZE + p->length);
 
     if (n != HEADER_SIZE + p->length)
-        std::raise(SocketError::WRITE_ERROR);
+        throw SocketError::WRITE_ERROR;
 
     logger.set("Sent packet of " + std::to_string(n) + " bytes").stamp().info();
     return n;

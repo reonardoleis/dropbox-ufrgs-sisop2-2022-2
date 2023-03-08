@@ -12,7 +12,10 @@ ClientSocket::ClientSocket(const char* server_address, int server_port)
     this->is_waiting = false;
     bzero(this->buffer, HEADER_SIZE);
     if ((this->sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
-        std::raise(SocketError::BIND_ERROR);
+        throw SocketError::BIND_ERROR;
+
+    
+    
 
     this->port = server_port;
     this->server = gethostbyname(server_address);
@@ -27,7 +30,7 @@ int ClientSocket::connect_to_server()
 {
     int err = connect(this->sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr));
     if (err < 0) {
-        std::raise(SocketError::CONNECT_ERROR);
+        throw SocketError::CONNECT_ERROR;
     }
 
     return 0;
