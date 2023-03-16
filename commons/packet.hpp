@@ -29,6 +29,8 @@ enum packet_type:short {
     STOP_SERVER_BROADCAST,
     UNKNOWN_RESP,
     DELETE_BROADCAST,
+    MASTER_REQ,
+    MASTER_RESP,
 };
 
 typedef struct packet{

@@ -11,10 +11,10 @@
 #include <netdb.h>
 #include <pwd.h>
 #include <semaphore.h>
-#include "../../../commons/packet.hpp"
-#include "../socket/client_socket.hpp"
-#include "../../../commons/file_manager/file_manager.hpp"
-#include "../../../commons/file_manager/file.hpp"
+#include "../../../../commons/packet.hpp"
+#include "../../../frontend/socket/client_socket.hpp"
+#include "../../../../commons/file_manager/file_manager.hpp"
+#include "../../../../commons/file_manager/file.hpp"
 #include "../../sync_manager/sync_manager.hpp"
 
 enum sync_type:short {

@@ -5,8 +5,8 @@
 #include <string>
 #include <mutex>
 #include <semaphore.h>
-#include "../comms/socket/client_socket.hpp"
-#include "../../commons/file_manager/file.hpp"
+#include "../../frontend/socket/client_socket.hpp"
+#include "../../../commons/file_manager/file.hpp"
 
 class SyncManager
 {

@@ -10,11 +10,11 @@
 #include <netdb.h>
 #include <pwd.h>
 #include "../commons/packet.hpp"
-#include "./comms/socket/client_socket.hpp"
-#include "./comms/input_manager/input_manager.hpp"
+#include "./frontend/socket/client_socket.hpp"
+#include "./backend/comms/input_manager/input_manager.hpp"
 #include "../commons/file_manager/file_manager.hpp"
 #include "../commons/file_manager/file.hpp"
-#include "./sync_manager/sync_manager.hpp"
+#include "./backend/sync_manager/sync_manager.hpp"
 
 typedef struct packet_listener_input_t
 {
@@ -247,3 +247,4 @@ int main(int argc, char *argv[])
 
   return 0;
 }
+
