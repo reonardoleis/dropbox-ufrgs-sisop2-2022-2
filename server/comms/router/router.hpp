@@ -18,6 +18,7 @@ typedef struct router_handle_connection_input {
     ServerSocket *server_socket;
     bool *is_router_routing;
     ServerSocket *out_slave_socket;
+    server_list_t backups;
 } router_handle_connection_input;
 
 

@@ -2,19 +2,15 @@
 #include "../../../commons/socket/socket.hpp"
 #include <string>
 
-typedef struct _server_ip_port {
-    std::string server_ip;
-    int server_port;
-} server_ip_port_t;
-
 class ClientSocket : public Socket {
     private:
         socklen_t clilen;
         struct sockaddr_in serv_addr;
-        server_ip_port_t *backup_list;
-        int backup_amount;
+        server_list_t backup_list;
     public:
         ClientSocket(const char* server_address, int server_port);
+        void set_backups(server_list_t backup_list);
+        void read_backups(packet p);
         static void error_handler(int signal);
         int connect_to_server();
         struct hostent *server;

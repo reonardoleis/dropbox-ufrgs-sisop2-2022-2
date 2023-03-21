@@ -351,6 +351,10 @@ void *Manager::handle_connection(void *input)
 
         break;
     }
+    case REDUNDANCY_REQ:
+    {
+        
+    }
     default:
     {
         packet p = connection->build_packet(packet_type::UNKNOWN_RESP, 0, 0, "Unrecognized packet type");

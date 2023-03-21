@@ -25,6 +25,7 @@ int Router::start()
     logger.set("Manager dispatched").stamp().info();
 
     pthread_t router_handle_connection_thread_id = 0;
+    //TODO: Add backup list to struct declaration
     router_handle_connection_input *handled_connection = new router_handle_connection_input;
     handled_connection->server_socket = this->server_socket;
     handled_connection->is_router_routing = &routing;

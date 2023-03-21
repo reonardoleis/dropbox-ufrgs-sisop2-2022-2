@@ -31,6 +31,11 @@ enum packet_type:short {
     DELETE_BROADCAST,
     MASTER_REQ,
     MASTER_RESP,
+    REDUNDANCY_REQ,
+    REDUNDANCY_ACK,
+    REDUNDANCY_NACK,
+    SERVER_HANDSHAKE,
+    SERVER_KEEPALIVE
 };
 
 typedef struct packet{

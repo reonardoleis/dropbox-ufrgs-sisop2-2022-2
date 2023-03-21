@@ -17,6 +17,16 @@
 
 #define HEADER_SIZE sizeof(packet) - sizeof(char*)
 
+typedef struct _server_ip_port {
+    std::string server_ip;
+    int server_port;
+} server_ip_port_t;
+
+typedef struct _server_list {
+    int list_size;
+    server_ip_port_t *list;
+} server_list_t;
+
 class Socket {
     protected:
         char buffer[HEADER_SIZE];

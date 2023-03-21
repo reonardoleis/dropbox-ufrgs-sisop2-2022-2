@@ -9,6 +9,7 @@
 using namespace std;
 int main(int argc, char *argv[])
 {
+    //TODO: Recieve master on startup and ask(?) for other backups (handshake) SERVER_HANDSHAKE and SERVER_KEEPALIVE
     cli_logger logger = cli_logger(frontend.get_log_stream());
     int port = 8080;
     if (argc >= 2)

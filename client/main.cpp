@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 {
   if (argc < 4)
   {
-    printf("Wrong usage: expected ./myClient <username> <server_name_or_ip> <port>");
+    printf("Wrong usage: expected ./myClient <username> [<server_name_or_ip> <port>, ...]");
     return -1;
   }
 
@@ -203,11 +203,27 @@ int main(int argc, char *argv[])
   ClientSocket client_soc(server_address_str.c_str(), port);
   client_soc.connect_to_server();
 
+  //
   packet p = client_soc.build_packet(packet_type::LOGIN_REQ, 0, 1, username.c_str());
   client_soc.write_packet(&p);
 
   packet response = client_soc.read_packet();
   printf("response: %s\n", response._payload);
+
+  p = client_soc.build_packet(packet_type::REDUNDANCY_REQ, 0, 1, username.c_str());
+  client_soc.write_packet(&p);
+
+  response = client_soc.read_packet();
+  if(response.type == REDUNDANCY_ACK)
+  {
+    printf("Redundancy available\n");
+    
+  }
+  else if(response.type == REDUNDANCY_NACK)
+  {
+    printf("response: %s\n", response._payload);
+    printf("Redundancy unavailable\n");
+  }
 
   SyncManager sync_manager(&client_soc);
   pthread_t sync_thread_id = 0;
