@@ -35,7 +35,9 @@ enum packet_type:short {
     REDUNDANCY_ACK,
     REDUNDANCY_NACK,
     SERVER_HANDSHAKE,
-    SERVER_KEEPALIVE
+    SERVER_KEEPALIVE,
+    JOIN_REQ,
+    JOIN_RESP
 };
 
 typedef struct packet{

@@ -3,6 +3,9 @@
 #include "../../../commons/file_manager/file_manager.hpp"
 #include "../../../commons/user/user.hpp"
 #include "../../../commons/packet.hpp"
+#include "router.hpp"
+#include <map>
+
 /*
     Handles connection between servers, which includes:
         * State replication
@@ -13,10 +16,13 @@ class InternalRouter {
     private: 
         std::map<std::string, User> users;
         server_list_t others;
+        ServerSocket *server_socket;
+        Router *router;
     public:
-        InternalRouter();
+        InternalRouter(ServerSocket *server_socket);
         void start_vote();
         void broadcast(packet p);
-        int start(); // start handling the messages
+        int broadcast_others();
+        static void * start(void *input); // start handling the messages
         static void * handle_connection(void *input);
-}
+};

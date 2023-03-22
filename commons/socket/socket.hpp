@@ -20,6 +20,9 @@
 typedef struct _server_ip_port {
     std::string server_ip;
     int server_port;
+    int id;
+    bool is_master;
+    long int last_keepalive;
 } server_ip_port_t;
 
 typedef struct _server_list {
