@@ -1,5 +1,8 @@
 #pragma once
 #include "../../../commons/socket/socket.hpp"
+#include "../../../commons/ui/ui_template.hpp"
+#include "../../../commons/ui/cli_types.hpp"
+#include <string.h>
 
 class BackupClientSocket : public Socket {
     private:

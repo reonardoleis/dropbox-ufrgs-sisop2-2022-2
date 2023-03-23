@@ -6,6 +6,13 @@ InternalRouter::InternalRouter(ServerSocket *server_socket)
     this->router = new Router(server_socket);
 }
 
+InternalRouter::InternalRouter(ServerSocket *server_socket, ConnectionsManager *connections_manager)
+{
+    this->server_socket = server_socket;
+    this->router = new Router(server_socket);
+    this->connections_manager = connections_manager;
+}
+
 void InternalRouter::start_vote()
 {
 }
@@ -21,9 +28,21 @@ int InternalRouter::broadcast_others()
 
 void * InternalRouter::start(void *input)
 {
-    InternalRouter *self = (InternalRouter *)input;
-    bool routing = true;
+    InternalRouter *self = (InternalRouter *) input;
     cli_logger logger = cli_logger(frontend.get_log_stream());
+    if (int err = self->server_socket->bind_and_listen() < 0)
+    {
+        return (void*)err;
+    }
+
+    if (!self->get_is_master()) {
+        logger.stamp().set("starting connections manager because I'm not the master").info();
+        pthread_t connections_manager_keep_alive_thread_id = 0;
+        pthread_create(&connections_manager_keep_alive_thread_id, NULL, ConnectionsManager::keep_alive, (void *)self);
+    }
+
+    bool routing = true;
+   
 
     logger.stamp().set("Starting internal router...").info();
 
@@ -60,6 +79,12 @@ void * InternalRouter::start(void *input)
             message = "Server join accepted";
             packet p = self->server_socket->build_packet(packet_type::JOIN_RESP, 0, 0, message.c_str());
             backup_slave_socket.write_packet(&p);
+            break;
+        }
+        case packet_type::SERVER_KEEPALIVE:
+        {
+            logger.stamp().set("Keep alive received").info();
+            break;
         }
         }
     }
@@ -83,4 +108,14 @@ void *InternalRouter::handle_connection(void *input)
     }
 
     return NULL;
+}
+
+void InternalRouter::set_is_master(bool is_master)
+{
+    this->is_master = is_master;
+}
+
+bool InternalRouter::get_is_master()
+{
+    return this->is_master;
 }

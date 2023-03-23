@@ -22,7 +22,7 @@ typedef struct _server_ip_port {
     int server_port;
     int id;
     bool is_master;
-    long int last_keepalive;
+    time_t last_keepalive;
 } server_ip_port_t;
 
 typedef struct _server_list {

@@ -3,7 +3,6 @@
 #include "../../../commons/ui/ui_template.hpp"
 #include "../../../commons/ui/cli_types.hpp"
 
-
 class ServerSocket : public Socket {
     public:
         int queue_size;

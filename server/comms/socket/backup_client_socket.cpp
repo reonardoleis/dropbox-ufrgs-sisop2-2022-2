@@ -4,6 +4,7 @@
 
 BackupClientSocket::BackupClientSocket(const char* server_address, int server_port)
 {
+    cli_logger logger = cli_logger(frontend.get_log_stream());
     std::signal(SocketError::READ_HEADER_ERROR, BackupClientSocket::error_handler);
     std::signal(SocketError::READ_PAYLOAD_ERROR, BackupClientSocket::error_handler);
     std::signal(SocketError::WRITE_ERROR, BackupClientSocket::error_handler);
@@ -18,7 +19,10 @@ BackupClientSocket::BackupClientSocket(const char* server_address, int server_po
     
 
     this->port = server_port;
-    this->server = gethostbyname(server_address);
+    logger.set(std::string(server_address)).stamp().error();
+    char * unconst_server_address = strdup(server_address);
+    strcat(unconst_server_address, "\0");
+    this->server = gethostbyname(unconst_server_address);
     this->serv_addr.sin_family = AF_INET;     
     this->serv_addr.sin_port = htons(port);    
 	this->serv_addr.sin_addr = *((struct in_addr *)server->h_addr);

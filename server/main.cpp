@@ -5,6 +5,7 @@
 #include "../commons/ui/cli_types.hpp"
 #include "../commons/ui/ui_template.hpp"
 #include "./comms/socket/backup_client_socket.hpp"
+#include "./comms/connections_manager/connections_manager.hpp"
 #define MASTER_SOCKET_QUEUE_SIZE 5
 
 using namespace std;
@@ -14,7 +15,7 @@ int main(int argc, char *argv[])
     cli_logger logger = cli_logger(frontend.get_log_stream());
     int port = 8080;
     char *role = "";
-    char *master_ip = "";
+    std::string master_ip = "";
     int master_port = 0;
 
     if (argc < 3)
@@ -57,25 +58,40 @@ int main(int argc, char *argv[])
     logger.set("Starting server on port: " + to_string(port)).stamp().info();
 
     ServerSocket master_socket = ServerSocket(port, MASTER_SOCKET_QUEUE_SIZE);
+    ServerSocket internal_socket = ServerSocket(port + 50, MASTER_SOCKET_QUEUE_SIZE);
 
     Router router = Router(&master_socket);
-    InternalRouter internal_router = InternalRouter(&master_socket);
 
-    // make a thread to call internal_router.start()
     pthread_t internal_router_thread_id = 0;
-    pthread_create(&internal_router_thread_id, NULL, InternalRouter::start, (void *)&internal_router);
-
     if (strcmp(role, "backup") == 0)
     {
         logger.set("Connecting to master...").stamp().info();
-      
-        BackupClientSocket client_soc(master_ip, master_port);
-    
+        BackupClientSocket client_soc(master_ip.c_str(), master_port);
+        int err = client_soc.connect_to_master_server();
+        if (err != 0)
+        {
+            logger.set("Failed to connect to master").stamp().error();
+            return 1;
+        }
+
         logger.set("Connected to master...").stamp().info();
-        //
-        //packet p = client_soc.build_packet(packet_type::LOGIN_REQ, 0, 1, username.c_str());
-        //client_soc.write_packet(&p);
+        packet p = client_soc.build_packet(packet_type::JOIN_REQ, 0, 1, "localhost:50001");
+        client_soc.write_packet(&p);
+        
+        ConnectionsManager connections_manager = ConnectionsManager(&client_soc);
+        InternalRouter internal_router = InternalRouter(&internal_socket, &connections_manager);
+        internal_router.set_is_master(false);
+
+        internal_router_thread_id = 0;
+        pthread_create(&internal_router_thread_id, NULL, InternalRouter::start, (void *)&internal_router);
+
+    } else {
+        InternalRouter internal_router = InternalRouter(&internal_socket);
+        internal_router.set_is_master(true);
+        internal_router_thread_id = 0;
+        pthread_create(&internal_router_thread_id, NULL, InternalRouter::start, (void *)&internal_router);
     }
+    
 
     router.start();
 
