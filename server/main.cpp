@@ -62,12 +62,13 @@ int main(int argc, char *argv[])
 
     Router router = Router(&master_socket);
 
+    BackupClientSocket *client_soc;
     pthread_t internal_router_thread_id = 0;
     if (strcmp(role, "backup") == 0)
     {
+        client_soc = new BackupClientSocket(master_ip.c_str(), master_port+50);
         logger.set("Connecting to master...").stamp().info();
-        BackupClientSocket client_soc(master_ip.c_str(), master_port);
-        int err = client_soc.connect_to_master_server();
+        int err = client_soc->connect_to_master_server();
         if (err != 0)
         {
             logger.set("Failed to connect to master").stamp().error();
@@ -75,11 +76,11 @@ int main(int argc, char *argv[])
         }
 
         logger.set("Connected to master...").stamp().info();
-        packet p = client_soc.build_packet(packet_type::JOIN_REQ, 0, 1, "localhost:50001");
-        client_soc.write_packet(&p);
+        packet p = client_soc->build_packet(packet_type::JOIN_REQ, 0, 1, "localhost:50001");
+        client_soc->write_packet(&p);
         
-        ConnectionsManager connections_manager = ConnectionsManager(&client_soc);
-        InternalRouter internal_router = InternalRouter(&internal_socket, &connections_manager);
+        //ConnectionsManager connections_manager = ConnectionsManager(client_soc);
+        InternalRouter internal_router = InternalRouter(&internal_socket, client_soc);
         internal_router.set_is_master(false);
 
         internal_router_thread_id = 0;

@@ -1,4 +1,5 @@
-#include "internal_manager.hpp"
+//TODO: Complete internal_manager (ONLY NEEDED FOR MASTER)
+/*#include "internal_manager.hpp"
 
 InternalManager::InternalManager()
 {
@@ -63,3 +64,4 @@ bool *InternalManager::get_is_router_routing()
     return this->is_router_routing;
 }
 
+*/
