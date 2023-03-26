@@ -6,13 +6,17 @@
 #include "router.hpp"
 #include ".././connections_manager/connections_manager.hpp"
 #include <map>
-#define TIMEOUTMS 500
+#include <semaphore.h>
+#include <vector>
+#define TIMEOUTMS 5000 // 500ms
 
 typedef struct _timeout_socket
 {
     BackupClientSocket *sock;
     time_t *start;
     bool *timeout;
+    sem_t *p_sm;
+    
 } timeout_socket_t;
 
 /*
@@ -24,7 +28,7 @@ typedef struct _timeout_socket
 class InternalRouter {
     private: 
         std::map<std::string, User> users;
-        server_list_t others;
+        std::vector<server_ip_port_t> others;
         Router *router;
         bool is_master;
     public:

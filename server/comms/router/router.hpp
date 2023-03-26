@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../socket/server_socket.hpp"
+#include <vector>
 class Router {
     public:
         ServerSocket *server_socket;
@@ -10,7 +11,7 @@ class Router {
         // DeleteController delete_controller;
         // ListController list_controller;
         // SynchronizeController synchronize_controller;
-        int start(); // start handling the messages
+        int start(std::vector<sockaddr_in> context); // start handling the messages
         static void * handle_connection(void *input);
 };
 
@@ -20,5 +21,3 @@ typedef struct router_handle_connection_input {
     ServerSocket *out_slave_socket;
     server_list_t backups;
 } router_handle_connection_input;
-
-

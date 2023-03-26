@@ -10,7 +10,7 @@ Router::Router(ServerSocket *server_socket)
     this->server_socket = server_socket;
 }
 
-int Router::start()
+int Router::start(std::vector<sockaddr_in> context)
 {
     if (int err = this->server_socket->bind_and_listen() < 0)
     {
@@ -32,6 +32,14 @@ int Router::start()
     handled_connection->out_slave_socket = NULL;
 
     pthread_create(&router_handle_connection_thread_id, NULL, Router::handle_connection, (void *)handled_connection);
+    Socket udp_sock;
+    udp_sock.udp_client();
+    packet p_hs = udp_sock.build_packet(packet_type::SERVER_HANDSHAKE, 0, 1, "");
+    for(sockaddr_in addr : context)
+    {
+        udp_sock.udp_send(&p_hs, addr);
+    }
+    udp_sock.close_connection();
     while (routing)
     {
         bool is_master_socket_waiting = this->server_socket->get_is_waiting();

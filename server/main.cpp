@@ -59,11 +59,16 @@ int main(int argc, char *argv[])
 
     ServerSocket master_socket = ServerSocket(port, MASTER_SOCKET_QUEUE_SIZE);
     ServerSocket internal_socket = ServerSocket(port + 50, MASTER_SOCKET_QUEUE_SIZE);
+    if (int err = internal_socket.bind_and_listen() < 0)
+    {
+        return err;
+    }
 
     Router router = Router(&master_socket);
-
+    InternalRouter *internal_router = NULL;
     BackupClientSocket *client_soc;
     pthread_t internal_router_thread_id = 0;
+    std::vector<sockaddr_in> *p_context = new std::vector<sockaddr_in>;
     if (strcmp(role, "backup") == 0)
     {
         client_soc = new BackupClientSocket(master_ip.c_str(), master_port+50);
@@ -76,25 +81,35 @@ int main(int argc, char *argv[])
         }
 
         logger.set("Connected to master...").stamp().info();
-        packet p = client_soc->build_packet(packet_type::JOIN_REQ, 0, 1, "localhost:50001");
+        packet p = client_soc->build_packet(packet_type::JOIN_REQ, 0, 1, std::to_string(port).c_str());
         client_soc->write_packet(&p);
         
         //ConnectionsManager connections_manager = ConnectionsManager(client_soc);
-        InternalRouter internal_router = InternalRouter(&internal_socket, client_soc);
-        internal_router.set_is_master(false);
+        internal_router = new InternalRouter(&internal_socket, client_soc);
+        internal_router->set_is_master(false);
 
         internal_router_thread_id = 0;
-        pthread_create(&internal_router_thread_id, NULL, InternalRouter::start, (void *)&internal_router);
+        delete p_context;
+        p_context = (std::vector<sockaddr_in> *)InternalRouter::start((void *)internal_router);
 
-    } else {
-        InternalRouter internal_router = InternalRouter(&internal_socket);
-        internal_router.set_is_master(true);
+    } 
+    if(internal_router == NULL)
+    {
+        internal_router = new InternalRouter(&internal_socket);
+        internal_router->set_is_master(true);
         internal_router_thread_id = 0;
-        pthread_create(&internal_router_thread_id, NULL, InternalRouter::start, (void *)&internal_router);
+        pthread_create(&internal_router_thread_id, NULL, InternalRouter::start, (void *)internal_router);
+    }
+    else
+    {
+        internal_router = new InternalRouter(&internal_socket);
+        internal_router->set_is_master(true);
+        internal_router_thread_id = 0;
+        pthread_create(&internal_router_thread_id, NULL, InternalRouter::start, (void *)internal_router);
     }
     
 
-    router.start();
+    router.start(*p_context);
 
     logger.set("Closing server...").stamp().info();
     frontend.stop_ui();

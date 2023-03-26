@@ -1,4 +1,7 @@
 #include "internal_router.hpp"
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/select.h>
 
 InternalRouter::InternalRouter(ServerSocket *server_socket)
 {
@@ -37,86 +40,98 @@ void * InternalRouter::start(void *input)
 {
     InternalRouter *self = (InternalRouter *) input;
     cli_logger logger = cli_logger(frontend.get_log_stream());
-    if (int err = self->server_socket->bind_and_listen() < 0)
-    {
-        return NULL;
-    }
     bool timeout = false;
     time_t start = 0;
-    timeout_socket_t ts {self->client_socket, &start, &timeout};
+    pthread_t keep_alive_thread_id = 0;
+    pthread_t timeout_thread_id = 0;
+    sem_t sm;
+    timeout_socket_t ts {self->client_socket, &start, &timeout, &sm};
+    std::vector<sockaddr_in> *p_context = new std::vector<sockaddr_in>;
     if (!self->get_is_master()) {
         logger.stamp().set("starting connections manager because I'm not the master").info();
-        pthread_t keep_alive_thread_id = 0;
-        pthread_t timeout_thread_id = 0;
         pthread_create(&keep_alive_thread_id, NULL, InternalRouter::keepalive, (void *)&ts);
         *(ts.start) = time(NULL);
-        pthread_create(&keep_alive_thread_id, NULL, InternalRouter::timeout, (void *)&ts);
+        //pthread_create(&timeout_thread_id, NULL, InternalRouter::timeout, (void *)&ts);
+        //usleep(100);
+        //pthread_join(timeout_thread_id, NULL);
+        pthread_join(keep_alive_thread_id, NULL);
+        logger.set("Starting voting round").stamp().warning();
+        // Voting round to determine new master;
+
+    }
+    else
+    {
+        bool routing = true;
+    
+
+        logger.stamp().set("Starting internal router...").info();
+
+        while (routing)
+        {
+            ServerSocket slave_socket = self->server_socket->accept_connection();
+            server_ip_port_t ipport;
+            ipport.socket = slave_socket;
+            ipport.flag = true;
+            ipport.id = 0;
+            self->others.push_back(ipport);
+            pthread_create(&ipport.id, NULL, InternalRouter::handle_connection, (void *)&(self->others));
+
+        }
     }
 
-    bool routing = true;
-   
 
-    logger.stamp().set("Starting internal router...").info();
+    return p_context;
+}
 
-    pthread_t router_handle_connection_thread_id = 0;
-    // TODO: Add backup list to struct declaration
-    router_handle_connection_input *handled_connection = new router_handle_connection_input;
-    handled_connection->server_socket = self->server_socket;
-    handled_connection->is_router_routing = &routing;
-    handled_connection->out_slave_socket = NULL;
+void *InternalRouter::handle_connection(void *input)
+{
+    std::vector<server_ip_port_t> *others = (std::vector<server_ip_port_t> *)input;
+    server_ip_port_t in = others->back();
+    cli_logger logger = cli_logger(frontend.get_log_stream());
 
-    pthread_create(&router_handle_connection_thread_id, NULL, Router::handle_connection, (void *)handled_connection);
-    //TODO: Complete internal_manager (ONLY NEEDED FOR MASTER)
-    while (routing)
+    while (in.flag)
     {
-        bool is_master_socket_waiting = self->server_socket->get_is_waiting();
-        if (!is_master_socket_waiting)
-        {
-            continue;
-        }
+        packet p = in.socket.read_packet();
 
-        ServerSocket backup_slave_socket = *handled_connection->out_slave_socket;
-        self->server_socket->set_is_waiting(false);
-
-        packet p = backup_slave_socket.read_packet();
-
-        logger.stamp().set("new packet on router").info();
+        //logger.stamp().set("new packet on router").info();
         std::string message = "";
         switch (p.type)
         {
         case packet_type::JOIN_REQ:
         {
             logger.stamp().set("Server join request").info();
-            std::string ip_port = std::string(p._payload);
-            logger.stamp().set("IP PORT: " + ip_port).info();
-            message = "Server join accepted";
-            packet p = self->server_socket->build_packet(packet_type::JOIN_RESP, 0, 0, message.c_str());
-            backup_slave_socket.write_packet(&p);
+            ServerSocket *ssock = (ServerSocket *)&(in.socket);
+            sockaddr_in addr = ssock->cli_addr;
+            in.server_ip = inet_ntoa(addr.sin_addr);
+            in.server_port = atoi(p._payload);
+            if(others->size() > 1)
+            {
+                for(int i = 0; i < others->size(); i+=2)
+                {
+                    const char *reply = std::string(others->at(i+1).server_ip + ":" + std::to_string(others->at(i+1).server_port)).c_str();
+                    packet r = in.socket.build_packet(packet_type::JOIN_RESP, 0, 1, reply);
+                    others->at(i).socket.write_packet(&r);
+                }
+                const char *reply = std::string(others->front().server_ip + ":" + std::to_string(others->front().server_port)).c_str();
+                packet r = others->back().socket.build_packet(packet_type::JOIN_RESP, 0, 1, reply);
+                others->back().socket.write_packet(&r);
+
+            }
             break;
         }
         case packet_type::SERVER_KEEPALIVE:
         {
             logger.stamp().set("Keep alive received").info();
+            packet r = in.socket.build_packet(packet_type::SERVER_KEEPALIVE, 0, 1, "");
+            in.socket.write_packet(&r);
             break;
         }
-        }
-    }
-
-    return 0;
-}
-
-void *InternalRouter::handle_connection(void *input)
-{
-    router_handle_connection_input *in = (router_handle_connection_input *)input;
-    ServerSocket *server_socket = in->server_socket;
-    bool *is_routing = in->is_router_routing;
-    while (*is_routing)
-    {
-        if (!server_socket->get_is_waiting())
+        case packet_type::JOIN_RESP:
         {
-            ServerSocket out_slave_socket = server_socket->accept_connection();
-            in->out_slave_socket = new ServerSocket(out_slave_socket);
-            server_socket->set_is_waiting(true);
+            std::string ip_port = std::string(p._payload);
+            in.server_ip = ip_port.substr(0, ip_port.rfind(":"));
+            in.server_port = atoi(ip_port.substr(ip_port.rfind(":")).c_str());
+        }
         }
     }
 
@@ -129,22 +144,63 @@ void * InternalRouter::keepalive(void * input)
     timeout_socket_t *ts = (timeout_socket_t *)input;
     BackupClientSocket *sock  = ts->sock;
     time_t *start = ts->start;
+    fd_set input_set;
+    struct timeval timeout;
     packet p = sock->build_packet(packet_type::SERVER_KEEPALIVE, 0, 1, "");
-    usleep(100);
     while (!(*(ts->timeout)))
     {
-        sock->write_packet(&p);
-        printf("\n\nkeepalive1");
-        packet r = sock->read_packet();
-        if(r.type == packet_type::SERVER_KEEPALIVE)
-        {
-            *start = time(NULL);
-            printf("\nalive");
+        try{
+            FD_ZERO(&input_set);
+            FD_SET(sock->sockfd, &input_set);
+            timeout.tv_sec = 0;
+            timeout.tv_usec = TIMEOUTMS;
+            sock->write_packet(&p);
+            int n = select(sock->sockfd+1, &input_set, NULL, NULL, &timeout);
+            if(n > 0)
+            {
+
+                packet r = sock->read_packet();
+                switch(r.type)
+                {
+                    case packet_type::SERVER_KEEPALIVE:
+                    {
+                        *start = time(NULL);
+                        logger.set(std::string("keepalive ") + std::to_string(*(ts->timeout))).stamp().info();
+                        break;
+                    }
+                    case packet_type::UPLOAD_REQ:
+                    {
+                        *start = time(NULL);
+                        //upload with additional username
+                        break;
+                    }
+                    case packet_type::DELETE_REQ:
+                    {
+                        *start = time(NULL);
+                        //delete with additional username
+                        break;
+                    }
+                    case packet_type::LOGIN_REQ:
+                    {
+                        *start = time(NULL);
+                        //login with additional username
+                        break;
+                    }
+                }
+                usleep(100);
+            }
+            else
+            {
+                logger.set("timeout").stamp().error();
+                return NULL;
+            }
         }
-        printf("\nkeepalive2\n\n");
-        usleep(100);
+        catch(SocketError err){
+            usleep(100);
+            continue;
+        }
     }
-    logger.set("keepalive").stamp().error();
+    logger.set("timeout").stamp().error();
     return NULL;
     
     /*
@@ -166,12 +222,9 @@ void * InternalRouter::timeout(void * input)
     timeout_socket_t *ts = (timeout_socket_t *)input;
     bool *timeout = ts->timeout;
     time_t *start = ts->start;
-    BackupClientSocket *sock = ts->sock;
-    packet p = sock->build_packet(packet_type::SERVER_KEEPALIVE, 0, 1, "");
-    sock->write_packet(&p);
     while ((time(NULL) - *start)*1000 < TIMEOUTMS)
     {
-        usleep(10);
+        usleep(1000);
     }
     *timeout = true;
     return NULL;

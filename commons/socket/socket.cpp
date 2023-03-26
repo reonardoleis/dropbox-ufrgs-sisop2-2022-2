@@ -61,7 +61,6 @@ packet Socket::read_packet()
 
 int Socket::write_packet(packet *p)
 {
-    cli_logger logger = cli_logger(frontend.get_log_stream());
     char *packet_bytes = (char *)malloc(HEADER_SIZE + p->length);
     memcpy(packet_bytes, (char *)p, HEADER_SIZE);
     memcpy(packet_bytes + HEADER_SIZE, (char *)p->_payload, p->length);
@@ -71,7 +70,6 @@ int Socket::write_packet(packet *p)
     if (n != HEADER_SIZE + p->length)
         throw SocketError::WRITE_ERROR;
 
-    logger.set("Sent packet of " + std::to_string(n) + " bytes").stamp().info();
     return n;
 }
 
@@ -123,3 +121,43 @@ void Socket::set_is_waiting(bool is_waiting)
     this->is_waiting_lock->unlock();
 }
 
+void Socket::udp_client()
+{
+    this->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+}
+
+void Socket::udp_server()
+{
+    this->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    this->port = UDP_IN_PORT;
+    sockaddr_in address;
+    address.sin_family = AF_INET;
+    address.sin_port = htons(this->port);
+    address.sin_addr.s_addr = INADDR_ANY;
+    bzero(&(address.sin_zero), 8);
+
+    bzero(buffer, HEADER_SIZE);
+    bind(this->sockfd, (const struct sockaddr *)&address, sizeof(address));
+
+}
+
+void Socket::udp_send(packet *p, sockaddr_in addr)
+{
+    char * buff = (char *) malloc(HEADER_SIZE + p->length);
+    memcpy(buff, p, HEADER_SIZE);
+    memcpy(buff + HEADER_SIZE, p->_payload, p->length);
+    sendto(this->sockfd, buff, p->length + HEADER_SIZE, MSG_CONFIRM, (const struct sockaddr *)&addr, sizeof(addr));
+}
+
+packet Socket::udp_recv()
+{
+    char * buff = (char *) malloc(HEADER_SIZE + UDP_MAX_MSG);
+    this->addr_len = sizeof(this->addr);
+    recvfrom(this->sockfd, buff, HEADER_SIZE + UDP_MAX_MSG, MSG_WAITALL, (struct sockaddr *)&(this->addr), &(this->addr_len));
+    packet p;
+
+    memcpy((char *)&p, buff, HEADER_SIZE);
+    p._payload = (char *) malloc(p.length);
+    memcpy((char *)p._payload, buff + HEADER_SIZE, p.length);
+    return p;
+}
