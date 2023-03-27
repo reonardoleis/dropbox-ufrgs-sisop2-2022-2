@@ -16,8 +16,10 @@ packet::packet(const packet &p) {
     this->seqn = p.seqn;
     this->total_size = p.total_size;
     this->type = p.type;
-    this->_payload = new char[this->length];
-    memcpy(this->_payload, p._payload, this->length);
+    free(this->_payload);
+    this->_payload = NULL;
+    this->_payload = (char *)malloc(p.length);
+    memcpy(this->_payload, p._payload, p.length);
 }
 
 packet::packet() {

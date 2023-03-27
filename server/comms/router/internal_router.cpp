@@ -7,6 +7,7 @@ InternalRouter::InternalRouter(ServerSocket *server_socket)
 {
     this->server_socket = server_socket;
     this->router = new Router(server_socket);
+    this->next_backup_id = 0;
 }
 
 InternalRouter::InternalRouter(ServerSocket *server_socket, ConnectionsManager *connections_manager)
@@ -14,6 +15,7 @@ InternalRouter::InternalRouter(ServerSocket *server_socket, ConnectionsManager *
     this->server_socket = server_socket;
     this->router = new Router(server_socket);
     this->connections_manager = connections_manager;
+    this->next_backup_id = 0;
 }
 
 InternalRouter::InternalRouter(ServerSocket *server_socket, BackupClientSocket *client_socket)
@@ -21,6 +23,7 @@ InternalRouter::InternalRouter(ServerSocket *server_socket, BackupClientSocket *
     this->server_socket = server_socket;
     this->router = new Router(server_socket);
     this->client_socket = client_socket;
+    this->next_backup_id = 0;
 }
 
 void InternalRouter::start_vote()
@@ -47,67 +50,81 @@ void * InternalRouter::start(void *input)
     sem_t sm;
     timeout_socket_t ts {self->client_socket, &start, &timeout, &sm};
     std::vector<sockaddr_in> *p_context = new std::vector<sockaddr_in>;
-    if (!self->get_is_master()) {
-        ServerSocket slave_socket = self->server_socket->accept_connection();
+    while(!self->get_is_master()) {
 
         logger.stamp().set("starting connections manager because I'm not the master").info();
-        pthread_create(&keep_alive_thread_id, NULL, InternalRouter::keepalive, (void *)&ts);
+        pthread_create(&keep_alive_thread_id, NULL, InternalRouter::keepalive, input);
         *(ts.start) = time(NULL);
         //pthread_create(&timeout_thread_id, NULL, InternalRouter::timeout, (void *)&ts);
         //usleep(100);
         //pthread_join(timeout_thread_id, NULL);
         pthread_join(keep_alive_thread_id, NULL);
         logger.set("Starting voting round").stamp().warning();
+
         // Voting round to determine new master;
-        while (!self->get_is_master()) {
-            packet p = self->client_socket->read_packet();
-            switch (p.type) {
-                case packet_type::JOIN_RESP:
+        if(self->get_adjacent().server_ip.empty())
+        {
+            self->set_is_master(true);
+            return p_context;
+        }
+        bool voting = true;
+        self->client_socket->close_connection();
+        server_ip_port_t ipport = self->get_adjacent();
+        self->client_socket->reset_connection(ipport.server_ip.c_str(), ipport.server_port + 50);
+        std::string ip_port_str = self->get_ip() + std::string(":") + std::to_string(self->server_socket->port);
+        packet my_vote = self->client_socket->build_packet(packet_type::VOTE, 0, self->get_id(), ip_port_str.c_str());
+        ServerSocket *my_adjacentsocket = new ServerSocket(8080, 2);
+        try{ 
+            self->client_socket->connect_to_server();
+            *my_adjacentsocket = self->server_socket->accept_connection();
+        }
+        catch(SocketError err)
+        {
+            *my_adjacentsocket = self->server_socket->accept_connection();
+            self->client_socket->connect_to_server();
+        }
+        self->client_socket->write_packet(&my_vote);
+
+        while (voting) {
+            packet p = my_adjacentsocket->read_packet();
+            if(p.type == packet_type::VOTE)
+            {
+                logger.stamp().set("Received vote").info();
+                int id_int = p.total_size;
+                if(p.seqn == 1)
                 {
-                    logger.stamp().set("Received join response").info();
-                    char * ip_port = p._payload;
-                    std::string ip_port_str = std::string(ip_port);
-                    std::string ip = ip_port_str.substr(0, ip_port_str.find(":"));
-                    std::string port_str = ip_port_str.substr(ip_port_str.find(":") + 1, ip_port_str.length());
-                    int port = std::stoi(port_str);
-
-                    _server_ip_port *ip_port = new _server_ip_port;
-                    ip_port->server_ip = ip;
-                    ip_port->server_port = port;
-                    ip_port->socket = slave_socket;
-
-                    self->others.push_back(*ip_port);
-
-                    break;
+                    try{
+                        self->client_socket->write_packet(&my_vote);
+                    }
+                    catch(SocketError err){}
+                    voting = false;
+                    std::string ip_port = std::string(p._payload);
+                    std::string server_ip = ip_port.substr(0, ip_port.rfind(":"));
+                    int server_port = atoi(ip_port.substr(ip_port.rfind(":")).c_str());
+                    self->client_socket->reset_connection(server_ip.c_str(), server_port);
+                    //self->client_socket->connect_to_server();
                 }
-                case packet_type::YOUR_ID_RESP:
+                else if(p.seqn == 0)
                 {
-                    logger.stamp().set("Received your id response").info();
-                    char * id = p._payload;
-                    int id_int = std::stoi(std::string(id));
-                    self->set_id(id_int);
-                    break;
-                }
-                case packet_type::VOTE:
-                {
-                    logger.stamp().set("Received vote").info();
-                    char * id = p._payload;
-                    int id_int = std::stoi(std::string(id));
                     if (self->get_id() == id_int) {
-                        logger.stamp().set("I'm the master >:").info();
+                        logger.stamp().set("I'm the master >:)").info();
                         self->set_is_master(true);
+                        p.seqn = 1;
+                        self->client_socket->write_packet(&p);
+                        self->client_socket->close_connection();
+                        voting = false;
                     } else if (self->get_id() < id_int) {
                         logger.stamp().set("I want to be the master").info();
-                        
+                        self->client_socket->write_packet(&my_vote);
                     } else {
                         logger.stamp().set("I don't want to be the master").info();
+                        self->client_socket->write_packet(&p);
                     }
-                    break;
                 }
             }
         }
     }
-    else
+    if(self->get_is_master())
     {
         bool routing = true;
     
@@ -134,7 +151,7 @@ void * InternalRouter::start(void *input)
 void *InternalRouter::handle_connection(void *input)
 {
     std::vector<server_ip_port_t> *others = (std::vector<server_ip_port_t> *)input;
-    server_ip_port_t in = others->back();
+    server_ip_port_t &in = others->back();
     cli_logger logger = cli_logger(frontend.get_log_stream());
 
     while (in.flag)
@@ -147,45 +164,39 @@ void *InternalRouter::handle_connection(void *input)
         {
         case packet_type::JOIN_REQ:
         {
-            logger.stamp().set("Server join request").info();
             ServerSocket *ssock = (ServerSocket *)&(in.socket);
             sockaddr_in addr = ssock->cli_addr;
             in.server_ip = inet_ntoa(addr.sin_addr);
             in.server_port = atoi(p._payload);
+            logger.stamp().set(std::string("Server join request from ") + std::string(others->back().server_ip + ":" + std::to_string(others->back().server_port))).info();
             if(others->size() > 1)
             {
-                for(int i = 0; i < others->size(); i+=2)
-                {
-                    const char *reply = std::string(others->at(i+1).server_ip + ":" + std::to_string(others->at(i+1).server_port)).c_str();
-                    packet r = in.socket.build_packet(packet_type::JOIN_RESP, 0, 1, reply);
-                    others->at(i).socket.write_packet(&r);
-                }
+                const char *reply1 = std::string(others->back().server_ip + ":" + std::to_string(others->back().server_port)).c_str();
+                packet r1 = in.socket.build_packet(packet_type::JOIN_RESP, 0, 1, reply1);
+                others->at(others->size()-2).socket.write_packet(&r1);
+                logger.stamp().set(std::string("Joining ") + std::string(others->at(others->size()-2).server_ip + ":" + std::to_string(others->at(others->size()-2).server_port))).info();
 
 
-                int new_backup_id = others->size() - 1;
-                const char *reply = std::string(others->front().server_ip + ":" + std::to_string(others->front().server_port)).c_str();
-                packet r = others->back().socket.build_packet(packet_type::JOIN_RESP, 0, 1, reply);
-                others->back().socket.write_packet(&r);
+                const char *reply2 = std::string(others->front().server_ip + ":" + std::to_string(others->front().server_port)).c_str();
+                packet r2 = others->back().socket.build_packet(packet_type::JOIN_RESP, 0, 1, reply2);
+                others->back().socket.write_packet(&r2);
+                logger.stamp().set(std::string("Joining ") + std::string(others->back().server_ip + ":" + std::to_string(others->back().server_port))).info();
 
-                char * new_backup_id_str = std::to_string(new_backup_id).c_str();
-                r = others->back().socket.build_packet(packet_type::JOIN_RESP, 0, 1, new_backup_id_str);
-                others->back().socket.write_packet(&r);
 
             }
+            int new_backup_id = others->size() - 1;
+            const char * new_backup_ip_str = in.server_ip.c_str();
+            logger.stamp().set(std::string("Sending id ") + std::to_string(new_backup_id) + " with " + std::string(in.server_ip)).info();
+            packet r3 = others->back().socket.build_packet(packet_type::YOUR_ID_RESP, 0, new_backup_id, new_backup_ip_str);
+            others->back().socket.write_packet(&r3);
             break;
         }
         case packet_type::SERVER_KEEPALIVE:
         {
-            logger.stamp().set("Keep alive received").info();
+            //logger.stamp().set("Keep alive received").info();
             packet r = in.socket.build_packet(packet_type::SERVER_KEEPALIVE, 0, 1, "");
             in.socket.write_packet(&r);
             break;
-        }
-        case packet_type::JOIN_RESP:
-        {
-            std::string ip_port = std::string(p._payload);
-            in.server_ip = ip_port.substr(0, ip_port.rfind(":"));
-            in.server_port = atoi(ip_port.substr(ip_port.rfind(":")).c_str());
         }
         }
     }
@@ -196,13 +207,13 @@ void *InternalRouter::handle_connection(void *input)
 void * InternalRouter::keepalive(void * input)
 {
     cli_logger logger = cli_logger(frontend.get_log_stream());
-    timeout_socket_t *ts = (timeout_socket_t *)input;
-    BackupClientSocket *sock  = ts->sock;
-    time_t *start = ts->start;
+    InternalRouter *self = (InternalRouter *)input;
+    BackupClientSocket *sock  = self->client_socket;
     fd_set input_set;
     struct timeval timeout;
     packet p = sock->build_packet(packet_type::SERVER_KEEPALIVE, 0, 1, "");
-    while (!(*(ts->timeout)))
+    bool timeout_b = false;
+    while (!timeout_b)
     {
         try{
             FD_ZERO(&input_set);
@@ -219,27 +230,35 @@ void * InternalRouter::keepalive(void * input)
                 {
                     case packet_type::SERVER_KEEPALIVE:
                     {
-                        *start = time(NULL);
-                        logger.set(std::string("keepalive ") + std::to_string(*(ts->timeout))).stamp().info();
                         break;
                     }
                     case packet_type::UPLOAD_REQ:
                     {
-                        *start = time(NULL);
                         //upload with additional username
                         break;
                     }
                     case packet_type::DELETE_REQ:
                     {
-                        *start = time(NULL);
                         //delete with additional username
                         break;
                     }
                     case packet_type::LOGIN_REQ:
                     {
-                        *start = time(NULL);
                         //login with additional username
                         break;
+                    }
+                    case packet_type::JOIN_RESP:
+                    {
+                        char * ip_port = r._payload;
+                        std::string ip_port_str = std::string(ip_port);
+                        logger.stamp().set(std::string("Received join response ") + ip_port_str).info();
+                        std::string ip = ip_port_str.substr(0, ip_port_str.find(":"));
+                        std::string port_str = ip_port_str.substr(ip_port_str.find(":") + 1, ip_port_str.length());
+                        int port = std::stoi(port_str);
+                        server_ip_port_t adjacent;
+                        adjacent.server_ip = ip;
+                        adjacent.server_port = port;
+                        self->set_adjacent(adjacent);
                     }
                 }
                 usleep(100);
@@ -251,6 +270,7 @@ void * InternalRouter::keepalive(void * input)
             }
         }
         catch(SocketError err){
+            logger.set("Error comunicationg with master server").stamp().error();
             usleep(100);
             continue;
         }
@@ -298,4 +318,34 @@ bool InternalRouter::get_is_master()
 
 int InternalRouter::get_next_backup_id() {
     return this->next_backup_id++;
+}
+
+void InternalRouter::set_id(int id)
+{
+    this->_id = id;
+}
+
+int InternalRouter::get_id()
+{
+    return this->_id;
+}
+
+void InternalRouter::set_adjacent(server_ip_port_t adjacent)
+{
+    this->adjacent = adjacent;
+}
+
+server_ip_port_t InternalRouter::get_adjacent()
+{
+    return this->adjacent;
+}
+
+void InternalRouter::set_ip(const char *ip)
+{
+    this->external_ip = ip;
+}
+
+std::string InternalRouter::get_ip()
+{
+    return this->external_ip;
 }

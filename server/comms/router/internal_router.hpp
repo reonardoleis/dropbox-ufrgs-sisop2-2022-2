@@ -8,7 +8,7 @@
 #include <map>
 #include <semaphore.h>
 #include <vector>
-#define TIMEOUTMS 5000 // 500ms
+#define TIMEOUTMS 100000 // 0.1s
 
 typedef struct _timeout_socket
 {
@@ -18,6 +18,14 @@ typedef struct _timeout_socket
     sem_t *p_sm;
     
 } timeout_socket_t;
+
+typedef struct _serialized_id_ipport
+{
+    int id;
+    int port;
+    char *ip;
+} serialized_id_ipport_t;
+
 
 /*
     Handles connection between servers, which includes:
@@ -32,6 +40,10 @@ class InternalRouter {
         Router *router;
         bool is_master;
         int id;
+        int _id;
+        server_ip_port_t adjacent;
+        std::string external_ip;
+        int next_backup_id;
     public:
         ServerSocket *server_socket;
         BackupClientSocket *client_socket;
@@ -47,7 +59,12 @@ class InternalRouter {
         static void * timeout(void *input);
         void set_is_master(bool is_master);
         bool get_is_master();
+        int get_next_backup_id();
         void set_id(int id);
         int get_id();
+        void set_ip(const char *ip);
+        std::string get_ip();
+        void set_adjacent(server_ip_port_t adjacent);
+        server_ip_port_t get_adjacent();
         ConnectionsManager *connections_manager;
 };

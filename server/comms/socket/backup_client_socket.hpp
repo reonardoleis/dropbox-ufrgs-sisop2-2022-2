@@ -12,6 +12,7 @@ class BackupClientSocket : public Socket {
     public:
         BackupClientSocket(const char* server_address, int server_port);
         static void error_handler(int signal);
-        int connect_to_master_server();
+        int connect_to_server();
+        void reset_connection(const char* server_address, int server_port);
         struct hostent *server;
 };
