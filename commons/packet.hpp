@@ -37,7 +37,9 @@ enum packet_type:short {
     SERVER_HANDSHAKE,
     SERVER_KEEPALIVE,
     JOIN_REQ,
-    JOIN_RESP
+    JOIN_RESP,
+    VOTE,
+    YOUR_ID_RESP
 };
 
 typedef struct packet{

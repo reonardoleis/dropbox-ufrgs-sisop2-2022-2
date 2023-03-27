@@ -31,6 +31,7 @@ class InternalRouter {
         std::vector<server_ip_port_t> others;
         Router *router;
         bool is_master;
+        int id;
     public:
         ServerSocket *server_socket;
         BackupClientSocket *client_socket;
@@ -46,5 +47,7 @@ class InternalRouter {
         static void * timeout(void *input);
         void set_is_master(bool is_master);
         bool get_is_master();
+        void set_id(int id);
+        int get_id();
         ConnectionsManager *connections_manager;
 };

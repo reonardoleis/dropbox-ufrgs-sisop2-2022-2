@@ -48,6 +48,8 @@ void * InternalRouter::start(void *input)
     timeout_socket_t ts {self->client_socket, &start, &timeout, &sm};
     std::vector<sockaddr_in> *p_context = new std::vector<sockaddr_in>;
     if (!self->get_is_master()) {
+        ServerSocket slave_socket = self->server_socket->accept_connection();
+
         logger.stamp().set("starting connections manager because I'm not the master").info();
         pthread_create(&keep_alive_thread_id, NULL, InternalRouter::keepalive, (void *)&ts);
         *(ts.start) = time(NULL);
@@ -57,7 +59,53 @@ void * InternalRouter::start(void *input)
         pthread_join(keep_alive_thread_id, NULL);
         logger.set("Starting voting round").stamp().warning();
         // Voting round to determine new master;
+        while (!self->get_is_master()) {
+            packet p = self->client_socket->read_packet();
+            switch (p.type) {
+                case packet_type::JOIN_RESP:
+                {
+                    logger.stamp().set("Received join response").info();
+                    char * ip_port = p._payload;
+                    std::string ip_port_str = std::string(ip_port);
+                    std::string ip = ip_port_str.substr(0, ip_port_str.find(":"));
+                    std::string port_str = ip_port_str.substr(ip_port_str.find(":") + 1, ip_port_str.length());
+                    int port = std::stoi(port_str);
 
+                    _server_ip_port *ip_port = new _server_ip_port;
+                    ip_port->server_ip = ip;
+                    ip_port->server_port = port;
+                    ip_port->socket = slave_socket;
+
+                    self->others.push_back(*ip_port);
+
+                    break;
+                }
+                case packet_type::YOUR_ID_RESP:
+                {
+                    logger.stamp().set("Received your id response").info();
+                    char * id = p._payload;
+                    int id_int = std::stoi(std::string(id));
+                    self->set_id(id_int);
+                    break;
+                }
+                case packet_type::VOTE:
+                {
+                    logger.stamp().set("Received vote").info();
+                    char * id = p._payload;
+                    int id_int = std::stoi(std::string(id));
+                    if (self->get_id() == id_int) {
+                        logger.stamp().set("I'm the master >:").info();
+                        self->set_is_master(true);
+                    } else if (self->get_id() < id_int) {
+                        logger.stamp().set("I want to be the master").info();
+                        
+                    } else {
+                        logger.stamp().set("I don't want to be the master").info();
+                    }
+                    break;
+                }
+            }
+        }
     }
     else
     {
@@ -112,8 +160,15 @@ void *InternalRouter::handle_connection(void *input)
                     packet r = in.socket.build_packet(packet_type::JOIN_RESP, 0, 1, reply);
                     others->at(i).socket.write_packet(&r);
                 }
+
+
+                int new_backup_id = others->size() - 1;
                 const char *reply = std::string(others->front().server_ip + ":" + std::to_string(others->front().server_port)).c_str();
                 packet r = others->back().socket.build_packet(packet_type::JOIN_RESP, 0, 1, reply);
+                others->back().socket.write_packet(&r);
+
+                char * new_backup_id_str = std::to_string(new_backup_id).c_str();
+                r = others->back().socket.build_packet(packet_type::JOIN_RESP, 0, 1, new_backup_id_str);
                 others->back().socket.write_packet(&r);
 
             }
@@ -239,4 +294,8 @@ void InternalRouter::set_is_master(bool is_master)
 bool InternalRouter::get_is_master()
 {
     return this->is_master;
+}
+
+int InternalRouter::get_next_backup_id() {
+    return this->next_backup_id++;
 }

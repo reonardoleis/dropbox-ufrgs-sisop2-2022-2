@@ -55,6 +55,7 @@ typedef struct _server_ip_port {
     Socket socket;
     time_t last_keepalive;
     bool flag;
+    int _id;
 } server_ip_port_t;
 
 typedef struct _server_list {
