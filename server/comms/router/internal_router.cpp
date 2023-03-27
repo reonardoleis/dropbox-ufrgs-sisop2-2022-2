@@ -6,24 +6,27 @@
 InternalRouter::InternalRouter(ServerSocket *server_socket)
 {
     this->server_socket = server_socket;
-    this->router = new Router(server_socket);
+    //this->router = new Router(server_socket);
     this->next_backup_id = 0;
+    this->relaunch = false;
 }
 
 InternalRouter::InternalRouter(ServerSocket *server_socket, ConnectionsManager *connections_manager)
 {
     this->server_socket = server_socket;
-    this->router = new Router(server_socket);
+    //this->router = new Router(server_socket);
     this->connections_manager = connections_manager;
     this->next_backup_id = 0;
+    this->relaunch = false;
 }
 
 InternalRouter::InternalRouter(ServerSocket *server_socket, BackupClientSocket *client_socket)
 {
     this->server_socket = server_socket;
-    this->router = new Router(server_socket);
+    //this->router = new Router(server_socket);
     this->client_socket = client_socket;
     this->next_backup_id = 0;
+    this->relaunch = false;
 }
 
 void InternalRouter::start_vote()
@@ -34,9 +37,64 @@ void InternalRouter::broadcast(packet p)
 {
 }
 
-int InternalRouter::broadcast_others()
+int InternalRouter::broadcast_others(packet p, std::string user)
 {
+    cli_logger logger = cli_logger(frontend.get_log_stream());
+    packet sp = this->sign_packet(p, user);
+    for(auto other : this->others)
+    {
+        try{
+            logger.set("Trying to send internal packet " + std::to_string(sp.type) + " to " + other.server_ip).stamp().error();
+            other.socket.write_packet(&sp);
+        }
+        catch(SocketError err)
+        {
+            logger.set("Found error " + std::to_string(err)).stamp().error();
+            return err;
+        }
+    }
     return 0;
+}
+
+signed_payload_t InternalRouter::extract_signature(packet p)
+{
+    signed_payload_t signed_payload;
+    cli_logger logger = cli_logger(frontend.get_log_stream());
+    
+    if(p.type == packet_type::SIGNED_PACKET)
+    {
+        packet unsigned_packet;
+        char *username;
+        memcpy((char *)&unsigned_packet, p._payload, HEADER_SIZE);
+        unsigned_packet._payload = (char *)malloc(unsigned_packet.length);
+
+        size_t username_size = p.length - HEADER_SIZE - unsigned_packet.length;
+        username = (char *)malloc(username_size);
+
+        memcpy(unsigned_packet._payload, p._payload + HEADER_SIZE, unsigned_packet.length);
+        memcpy(username, p._payload + HEADER_SIZE + unsigned_packet.length, username_size);
+
+        signed_payload.p = unsigned_packet;
+        signed_payload.username = username;
+    }
+    else
+    {
+        signed_payload.p = p;
+        signed_payload.username = "";
+    }
+    
+    return signed_payload;
+}
+
+packet InternalRouter::sign_packet(packet p, std::string user)
+{
+    char *buff = (char *)malloc(HEADER_SIZE + p.length + user.size()+1);
+    memcpy(buff, (char *)&p, HEADER_SIZE);
+    memcpy(buff + HEADER_SIZE, (char *)p._payload, p.length);
+    memcpy(buff + HEADER_SIZE + p.length, user.c_str(), user.size()+1);
+
+    packet signed_packet = this->server_socket->build_packet_sized(packet_type::SIGNED_PACKET, 0, 1, HEADER_SIZE + p.length + user.size()+1, buff);
+    return signed_packet;
 }
 
 void * InternalRouter::start(void *input)
@@ -50,7 +108,8 @@ void * InternalRouter::start(void *input)
     sem_t sm;
     timeout_socket_t ts {self->client_socket, &start, &timeout, &sm};
     std::vector<sockaddr_in> *p_context = new std::vector<sockaddr_in>;
-    while(!self->get_is_master()) {
+    bool relaunch = false;
+    while(!self->get_is_master() && !relaunch) {
 
         logger.stamp().set("starting connections manager because I'm not the master").info();
         pthread_create(&keep_alive_thread_id, NULL, InternalRouter::keepalive, input);
@@ -59,12 +118,15 @@ void * InternalRouter::start(void *input)
         //usleep(100);
         //pthread_join(timeout_thread_id, NULL);
         pthread_join(keep_alive_thread_id, NULL);
+        keep_alive_thread_id = 0;
         logger.set("Starting voting round").stamp().warning();
 
         // Voting round to determine new master;
         if(self->get_adjacent().server_ip.empty())
         {
             self->set_is_master(true);
+            logger.stamp().set("No other backups available").warning();
+            logger.stamp().set("I'm the master >:)").info();
             return p_context;
         }
         bool voting = true;
@@ -93,16 +155,20 @@ void * InternalRouter::start(void *input)
                 int id_int = p.total_size;
                 if(p.seqn == 1)
                 {
+                    logger.set("Vote ended, starting setup for new master").stamp().warning();
                     try{
                         self->client_socket->write_packet(&my_vote);
                     }
                     catch(SocketError err){}
                     voting = false;
                     std::string ip_port = std::string(p._payload);
+                    logger.set("New master at " + ip_port).stamp().warning();
                     std::string server_ip = ip_port.substr(0, ip_port.rfind(":"));
-                    int server_port = atoi(ip_port.substr(ip_port.rfind(":")).c_str());
+                    int server_port = atoi(ip_port.substr(ip_port.rfind(":")+1).c_str());
                     self->client_socket->reset_connection(server_ip.c_str(), server_port);
                     //self->client_socket->connect_to_server();
+                    self->set_relaunch();
+                    relaunch = true;
                 }
                 else if(p.seqn == 0)
                 {
@@ -113,6 +179,7 @@ void * InternalRouter::start(void *input)
                         self->client_socket->write_packet(&p);
                         self->client_socket->close_connection();
                         voting = false;
+                        relaunch = true;
                     } else if (self->get_id() < id_int) {
                         logger.stamp().set("I want to be the master").info();
                         self->client_socket->write_packet(&my_vote);
@@ -124,7 +191,7 @@ void * InternalRouter::start(void *input)
             }
         }
     }
-    if(self->get_is_master())
+    if(self->get_is_master() && !relaunch)
     {
         bool routing = true;
     
@@ -209,10 +276,13 @@ void * InternalRouter::keepalive(void * input)
     cli_logger logger = cli_logger(frontend.get_log_stream());
     InternalRouter *self = (InternalRouter *)input;
     BackupClientSocket *sock  = self->client_socket;
+    ServerSocket *server_sock = self->server_socket;
     fd_set input_set;
     struct timeval timeout;
     packet p = sock->build_packet(packet_type::SERVER_KEEPALIVE, 0, 1, "");
     bool timeout_b = false;
+    bool half_timeout = false;
+    logger.set("Timeout tracking started for master").stamp().warning();
     while (!timeout_b)
     {
         try{
@@ -220,31 +290,40 @@ void * InternalRouter::keepalive(void * input)
             FD_SET(sock->sockfd, &input_set);
             timeout.tv_sec = 0;
             timeout.tv_usec = TIMEOUTMS;
-            sock->write_packet(&p);
+            
             int n = select(sock->sockfd+1, &input_set, NULL, NULL, &timeout);
             if(n > 0)
             {
+                half_timeout = false;
 
                 packet r = sock->read_packet();
+                //logger.set(std::to_string(p.type)).stamp().error();
                 switch(r.type)
-                {
+                {   case packet_type::SIGNED_PACKET:
+                    {
+                        signed_payload_t sr = self->extract_signature(r);
+                        logger.set(std::string("Recieved packet signed by ") + sr.username);
+                        switch (sr.p.type)
+                        {
+                            case packet_type::UPLOAD_REQ:
+                            {
+                                //upload with additional username
+                                break;
+                            }
+                            case packet_type::DELETE_REQ:
+                            {
+                                //delete with additional username
+                                break;
+                            }
+                            case packet_type::LOGIN_REQ:
+                            {
+                                //login with additional username
+                                break;
+                            }
+                        }
+                    }
                     case packet_type::SERVER_KEEPALIVE:
                     {
-                        break;
-                    }
-                    case packet_type::UPLOAD_REQ:
-                    {
-                        //upload with additional username
-                        break;
-                    }
-                    case packet_type::DELETE_REQ:
-                    {
-                        //delete with additional username
-                        break;
-                    }
-                    case packet_type::LOGIN_REQ:
-                    {
-                        //login with additional username
                         break;
                     }
                     case packet_type::JOIN_RESP:
@@ -260,13 +339,32 @@ void * InternalRouter::keepalive(void * input)
                         adjacent.server_port = port;
                         self->set_adjacent(adjacent);
                     }
+                    default:
+                    {
+                        logger.set(std::string("Recieved unknown packet"));
+                    }
                 }
                 usleep(100);
             }
             else
             {
-                logger.set("timeout").stamp().error();
-                return NULL;
+                try{
+                    if(half_timeout)
+                    {
+                        timeout_b = true;
+                    }
+                    else
+                    {
+                        //logger.set("Timeout, trying to reach host").stamp().warning();
+                        sock->write_packet(&p);
+                        half_timeout = true;
+                    }
+                }
+                catch(SocketError err)
+                {
+                    logger.set("Timeout with error " + std::to_string(err)).stamp().error();
+                    return NULL;
+                }
             }
         }
         catch(SocketError err){
@@ -275,21 +373,9 @@ void * InternalRouter::keepalive(void * input)
             continue;
         }
     }
-    logger.set("timeout").stamp().error();
+    logger.set("Timeout").stamp().error();
     return NULL;
     
-    /*
-   InternalRouter * internal_router = (InternalRouter *) input;
-   cli_logger logger = cli_logger(frontend.get_log_stream());
-   while (!internal_router->get_is_master()) {
-    logger.set("keep alive...").stamp().info();
-    packet p = internal_router->connections_manager->backup_client_socket->build_packet(packet_type::SERVER_KEEPALIVE, 0, 1, "a");
-    internal_router->connections_manager->backup_client_socket->write_packet(&p);
-    sleep(1);
- 
-   }
-    logger.set("keep alive exiting...").stamp().info();
-    */
 }
 
 void * InternalRouter::timeout(void * input)
@@ -348,4 +434,18 @@ void InternalRouter::set_ip(const char *ip)
 std::string InternalRouter::get_ip()
 {
     return this->external_ip;
+}
+
+void InternalRouter::set_relaunch()
+{
+    //this->id = 0;
+    this->_id = 0;
+    this->adjacent.server_ip = "";
+    this->adjacent.server_port = 0;
+    this->relaunch = true;
+}
+
+bool InternalRouter::should_relaunch()
+{
+    return this->relaunch;
 }

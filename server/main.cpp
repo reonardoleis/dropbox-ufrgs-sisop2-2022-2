@@ -69,9 +69,14 @@ int main(int argc, char *argv[])
     BackupClientSocket *client_soc;
     pthread_t internal_router_thread_id = 0;
     std::vector<sockaddr_in> *p_context = new std::vector<sockaddr_in>;
-    if (strcmp(role, "backup") == 0)
+
+    if(strcmp(role, "backup") == 0)
     {
         client_soc = new BackupClientSocket(master_ip.c_str(), master_port+50);
+    }
+    // RESTARTING BREAKPOINT 
+    while(strcmp(role, "backup") == 0)
+    {
         logger.set("Connecting to master...").stamp().info();
         int err = client_soc->connect_to_server();
         if (err != 0)
@@ -108,21 +113,23 @@ int main(int argc, char *argv[])
             *p = p3;
             p->_payload = (char *)malloc(p3.length);
             memcpy(p->_payload, p3._payload, p3.length);
-            logger.stamp().set(std::string("test1")).info();
         }
         if(p->type == packet_type::YOUR_ID_RESP)
         {
             logger.stamp().set("Received your id response").info();
             std::string ip = p->_payload;
             int id_int = p->total_size;
-            logger.stamp().set(std::string("test2 ") + ip).info();
             internal_router->set_id(id_int);
             internal_router->set_ip(ip.c_str());
-            logger.stamp().set(std::string("test3")).info();
         }
         internal_router_thread_id = 0;
         delete p_context;
         p_context = (std::vector<sockaddr_in> *)InternalRouter::start((void *)internal_router);
+
+        if(!internal_router->should_relaunch())
+        {
+            break;
+        }
 
     } 
     if(internal_router == NULL)
@@ -141,7 +148,7 @@ int main(int argc, char *argv[])
     }
     
 
-    router.start(*p_context);
+    router.start(*p_context, internal_router);
 
     logger.set("Closing server...").stamp().info();
     frontend.stop_ui();

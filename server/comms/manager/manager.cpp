@@ -132,7 +132,7 @@ void *Manager::handle_connection(void *input)
     std::string username = in->username;
 
     packet p = connection->read_packet();
-
+    in->manager->p_internal_router->broadcast_others(p, in->username);
     logger.set("new packet received on Manager::handle_connection (" + std::to_string(p.type) + ")").stamp().info();
     switch (p.type)
     {
@@ -376,7 +376,7 @@ int Manager::broadcast_to_user(std::string username, int except_socketfd, packet
     User user = this->users[username];
     Socket *connections = user.get_connections();
     int active_connections_count = user.get_active_connections_count();
-    logger.set(std::string("Closing ") + std::to_string(active_connections_count) + std::string(" connections for user") + username).stamp().warning();
+    //logger.set(std::string("Closing ") + std::to_string(active_connections_count) + std::string(" connections for user") + username).stamp().warning();
 
     for (int i = 0; i < active_connections_count; i++)
     {

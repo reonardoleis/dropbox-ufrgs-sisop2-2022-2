@@ -15,7 +15,7 @@
 #include "../ui/ui_template.hpp"
 #include <mutex>
 
-#define HEADER_SIZE sizeof(packet) - sizeof(char*)
+#define HEADER_SIZE (sizeof(packet) - sizeof(char*))
 #define UDP_IN_PORT 20120
 #define UDP_OUT_PORT 20121
 #define UDP_MAX_MSG 512

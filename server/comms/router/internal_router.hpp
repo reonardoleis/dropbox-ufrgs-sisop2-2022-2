@@ -3,7 +3,7 @@
 #include "../../../commons/file_manager/file_manager.hpp"
 #include "../../../commons/user/user.hpp"
 #include "../../../commons/packet.hpp"
-#include "router.hpp"
+//#include "router.hpp"
 #include ".././connections_manager/connections_manager.hpp"
 #include <map>
 #include <semaphore.h>
@@ -26,6 +26,12 @@ typedef struct _serialized_id_ipport
     char *ip;
 } serialized_id_ipport_t;
 
+typedef struct _signed_payload
+{
+    packet p;
+    char *username;
+} signed_payload_t;
+
 
 /*
     Handles connection between servers, which includes:
@@ -35,10 +41,10 @@ typedef struct _serialized_id_ipport
 */
 class InternalRouter {
     private: 
-        std::map<std::string, User> users;
+        std::map<std::string, std::vector<sockaddr_in>> users;
         std::vector<server_ip_port_t> others;
-        Router *router;
         bool is_master;
+        bool relaunch;
         int id;
         int _id;
         server_ip_port_t adjacent;
@@ -52,7 +58,9 @@ class InternalRouter {
         InternalRouter(ServerSocket *server_socket, BackupClientSocket *client_socket);
         void start_vote();
         void broadcast(packet p);
-        int broadcast_others();
+        int broadcast_others(packet p, std::string user);
+        signed_payload_t extract_signature(packet p);
+        packet sign_packet(packet p, std::string user);
         static void * start(void *input); // start handling the messages
         static void * handle_connection(void *input);
         static void * keepalive(void *input);
@@ -66,5 +74,7 @@ class InternalRouter {
         std::string get_ip();
         void set_adjacent(server_ip_port_t adjacent);
         server_ip_port_t get_adjacent();
+        void set_relaunch();
+        bool should_relaunch();
         ConnectionsManager *connections_manager;
 };

@@ -10,7 +10,7 @@ Router::Router(ServerSocket *server_socket)
     this->server_socket = server_socket;
 }
 
-int Router::start(std::vector<sockaddr_in> context)
+int Router::start(std::vector<sockaddr_in> context, InternalRouter *p_internal_router)
 {
     if (int err = this->server_socket->bind_and_listen() < 0)
     {
@@ -20,6 +20,7 @@ int Router::start(std::vector<sockaddr_in> context)
     bool routing = true;
     cli_logger logger = cli_logger(frontend.get_log_stream());
     Manager manager(&routing);
+    manager.p_internal_router = p_internal_router;
     pthread_t manager_thread_id = 0;
     pthread_create(&manager_thread_id, NULL, Manager::manage, (void *)&manager);
     logger.set("Manager dispatched").stamp().info();

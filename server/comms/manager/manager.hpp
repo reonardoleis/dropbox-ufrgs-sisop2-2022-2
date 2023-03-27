@@ -12,6 +12,7 @@
 #include "../../../commons/ui/cli_types.hpp"
 #include "../../../commons/ui/ui_template.hpp"
 #include "../../../commons/packet.hpp"
+#include "../router/internal_router.hpp"
 
 #define MAX_CONNECTIONS_PER_USER 2
 #define SYNC_DIRS_BASE_PATH "./sync_directories"
@@ -23,6 +24,7 @@ class Manager {
         FileManager server_file_manager;
 
     public:
+        InternalRouter *p_internal_router;
         int add_user(std::string username);
         int remove_user(std::string username);
         int add_connection(std::string username, Socket connection);

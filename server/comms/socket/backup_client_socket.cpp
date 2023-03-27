@@ -19,7 +19,7 @@ BackupClientSocket::BackupClientSocket(const char* server_address, int server_po
     
 
     this->port = server_port;
-    logger.set(std::string(server_address)).stamp().error();
+    
     char * unconst_server_address = strdup(server_address);
     strcat(unconst_server_address, "\0");
     this->server = gethostbyname(unconst_server_address);
@@ -47,7 +47,7 @@ void BackupClientSocket::reset_connection(const char* server_address, int server
     
 
     this->port = server_port;
-    logger.set(std::string(server_address)).stamp().error();
+   
     char * unconst_server_address = strdup(server_address);
     strcat(unconst_server_address, "\0");
     this->server = gethostbyname(unconst_server_address);
