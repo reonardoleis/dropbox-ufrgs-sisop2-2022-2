@@ -81,36 +81,29 @@ packet ClientSocket::client_read_packet()
     catch(SocketError err)
     {
         //this->close_connection();
-        for(int i = 0; i < this->backup_list.list_size; i++)
-        {
-            ClientSocket sock(this->backup_list.list[i].server_ip.c_str(), this->backup_list.list[i].server_port);
-            try{
-                sock.connect_to_server();
-                packet p_req = sock.build_packet(packet_type::MASTER_REQ, 0, 1, "");
-                sock.write_packet(&p_req);
-                packet p_res = sock.read_packet();
-                char *new_master = p_res._payload;
-                char *ip = strtok(new_master, ":");
-                int port = atoi(strtok(NULL, ":"));
+        
+        
+        Socket sock;
+        sock.udp_server();
+        packet p_res = sock.udp_recv();
+        char *new_master = p_res._payload;
+        char *ip = strtok(new_master, ":");
+        int port = atoi(strtok(NULL, ":"));
 
-                if ((this->sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
-                    throw SocketError::BIND_ERROR;
+        if ((this->sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+            throw SocketError::BIND_ERROR;
 
-                
-                
+        
+        
 
-                this->port = port;
-                this->server = gethostbyname(ip);
-                this->serv_addr.sin_family = AF_INET;     
-                this->serv_addr.sin_port = htons(port);    
-                this->serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+        this->port = port;
+        this->server = gethostbyname(ip);
+        this->serv_addr.sin_family = AF_INET;     
+        this->serv_addr.sin_port = htons(port);    
+        this->serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
 
-                this->connect_to_server();
-                break;
-                
-            }
-            catch(SocketError err){break;}
-        }
+        this->connect_to_server();
+        
         return this->read_packet();
     }
 }
@@ -123,37 +116,30 @@ int ClientSocket::client_write_packet(packet *p)
     }
     catch(SocketError err)
     {
-        //this->close_connection();
-        for(int i = 0; i < this->backup_list.list_size; i++)
-        {
-            ClientSocket sock(this->backup_list.list[i].server_ip.c_str(), this->backup_list.list[i].server_port);
-            try{
-                sock.connect_to_server();
-                packet p_req = sock.build_packet(packet_type::MASTER_REQ, 0, 1, "");
-                sock.write_packet(&p_req);
-                packet p_res = sock.read_packet();
-                char *new_master = p_res._payload;
-                char *ip = strtok(new_master, ":");
-                int port = atoi(strtok(NULL, ":"));
+        
+        Socket sock;
+        sock.udp_server();
+        packet p_res = sock.udp_recv();
+        char *new_master = p_res._payload;
+        char *ip = strtok(new_master, ":");
+        int port = atoi(strtok(NULL, ":"));
 
-                if ((this->sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
-                    throw SocketError::BIND_ERROR;
+        if ((this->sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+            throw SocketError::BIND_ERROR;
 
-                
-                
+        
+        
 
-                this->port = port;
-                this->server = gethostbyname(ip);
-                this->serv_addr.sin_family = AF_INET;     
-                this->serv_addr.sin_port = htons(port);    
-                this->serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+        this->port = port;
+        this->server = gethostbyname(ip);
+        this->serv_addr.sin_family = AF_INET;     
+        this->serv_addr.sin_port = htons(port);    
+        this->serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
 
-                this->connect_to_server();
-                break;
-                
-            }
-            catch(SocketError err){break;}
-        }
+        this->connect_to_server();
+            
+    }
+        
         return this->write_packet(p);
     }
 }

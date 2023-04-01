@@ -35,6 +35,7 @@ int Router::start(std::vector<sockaddr_in> context, InternalRouter *p_internal_r
     pthread_create(&router_handle_connection_thread_id, NULL, Router::handle_connection, (void *)handled_connection);
     Socket udp_sock;
     udp_sock.udp_client();
+    //TODO: add ip:port in packet buffer
     packet p_hs = udp_sock.build_packet(packet_type::SERVER_HANDSHAKE, 0, 1, "");
     for(sockaddr_in addr : context)
     {
