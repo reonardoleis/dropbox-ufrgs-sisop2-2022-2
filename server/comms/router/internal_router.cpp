@@ -44,7 +44,7 @@ int InternalRouter::broadcast_others(packet p, std::string user)
     for(auto other : this->others)
     {
         try{
-            logger.set("Trying to send internal packet " + std::to_string(sp.type) + " to " + other.server_ip).stamp().error();
+            logger.set("Trying to send internal packet " + std::to_string(sp.type) + " to " + other.server_ip).stamp().info();
             other.socket.write_packet(&sp);
         }
         catch(SocketError err)
@@ -302,7 +302,7 @@ void * InternalRouter::keepalive(void * input)
                 {   case packet_type::SIGNED_PACKET:
                     {
                         signed_payload_t sr = self->extract_signature(r);
-                        logger.set(std::string("Recieved packet signed by ") + sr.username);
+                        logger.set(std::string("Recieved packet signed by ") + sr.username).stamp().info();
                         switch (sr.p.type)
                         {
                             case packet_type::UPLOAD_REQ:
