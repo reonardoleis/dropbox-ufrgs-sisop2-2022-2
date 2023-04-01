@@ -317,12 +317,24 @@ void * InternalRouter::keepalive(void * input)
                         {
                             case packet_type::UPLOAD_REQ:
                             {
-                                //upload with additional username
+                                UploadController upload_controller = UploadController();
+                                serialized_file_t serialized_file = File::from_data(sr.p._payload);
+                                logger.set("uploading file " + std::string(serialized_file.filename) + " for user " + sr.username).stamp().info();
+
+                                File file = File("");
+                                file.deserialize(serialized_file);
+                                logger.set("file " + file.filename + " received").stamp().info();
+                                int err = upload_controller.upload(file, sr.username);
+                                
                                 break;
                             }
                             case packet_type::DELETE_REQ:
                             {
-                                //delete with additional username
+                                DeleteController delete_controller = DeleteController();
+                                std::string filename = sr.p._payload;
+                                logger.set("Deleting file " + filename + " for user " + sr.username).stamp().info();
+                                int err = delete_controller.delete_file(filename, sr.username);
+
                                 break;
                             }
                             case packet_type::LOGIN_REQ:

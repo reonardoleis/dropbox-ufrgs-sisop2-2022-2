@@ -3,6 +3,8 @@
 #include "../../../commons/file_manager/file_manager.hpp"
 #include "../../../commons/user/user.hpp"
 #include "../../../commons/packet.hpp"
+#include "../controllers/upload_controller.hpp"
+#include "../controllers/delete_controller.hpp"
 //#include "router.hpp"
 #include ".././connections_manager/connections_manager.hpp"
 #include <map>
