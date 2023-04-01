@@ -120,7 +120,19 @@ void * InternalRouter::start(void *input)
         pthread_join(keep_alive_thread_id, NULL);
         keep_alive_thread_id = 0;
         logger.set("Starting voting round").stamp().warning();
+        char ip[INET_ADDRSTRLEN];
+        logger.set("BUilding context").stamp().warning();
+        p_context->clear();
+        for(auto const& pair : self->users)
+        {
+            for(auto addr : pair.second)
+            {
+                inet_ntop(AF_INET, (char *)&(addr.sin_addr), (char *)ip, sizeof(ip));
 
+                logger.set("Adding connection " + std::string(ip) + " to context").stamp().warning();
+                p_context->push_back(addr);
+            }
+        }
         // Voting round to determine new master;
         if(self->get_adjacent().server_ip.empty())
         {
@@ -210,8 +222,6 @@ void * InternalRouter::start(void *input)
 
         }
     }
-
-
     return p_context;
 }
 
@@ -317,7 +327,20 @@ void * InternalRouter::keepalive(void * input)
                             }
                             case packet_type::LOGIN_REQ:
                             {
-                                //login with additional username
+                                logger.set("teste").stamp().error();
+                                sockaddr_in addr;
+                                memcpy(&addr, sr.p._payload, sr.p.length);
+                                std::vector<sockaddr_in> addr_vec;
+                                std::string username = std::string(sr.username);
+                                addr_vec.push_back(addr);
+                                auto pair = self->users.insert(std::make_pair(username, addr_vec));
+                                if(pair.second == false)
+                                {
+                                    logger.set("teste2").stamp().error();
+                                    self->users[username].push_back(addr);
+                                }
+                                logger.set(std::to_string(self->users.size())).stamp().error();
+
                                 break;
                             }
                         }

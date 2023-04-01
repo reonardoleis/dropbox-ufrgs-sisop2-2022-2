@@ -42,10 +42,10 @@ void *packet_listener(void *arg)
 
   while (!input_manager->is_done())
   {
-    packet *p_temp = NULL;
+    packet p_temp;
     try
     {
-      p_temp = new packet(client_soc->read_packet());
+      p_temp = client_soc->client_read_packet();
     }
     catch (SocketError e)
     {
@@ -53,7 +53,7 @@ void *packet_listener(void *arg)
       sleep(5);
       continue;
     }
-    packet p = *p_temp;
+    packet p = p_temp;
     // printf("type: %d\nlength: %d\nPayload: %s\n", p.type, p.length, p._payload);
 
     switch (p.type)
@@ -93,7 +93,7 @@ void *packet_listener(void *arg)
               int err = file.read_file(path);
               packet p = client_soc->build_packet_sized(packet_type::UPLOAD_REQ, 0, 0, file.get_payload_size(), file.to_data());
               curr_file += 1;
-              client_soc->write_packet(&p);
+              client_soc->client_write_packet(&p);
             }
           }
           else
@@ -205,15 +205,16 @@ int main(int argc, char *argv[])
 
   //
   packet p = client_soc.build_packet(packet_type::LOGIN_REQ, 0, 1, username.c_str());
-  client_soc.write_packet(&p);
+  client_soc.client_write_packet(&p);
 
-  packet response = client_soc.read_packet();
+
+  packet response = client_soc.client_read_packet();
   printf("response: %s\n", response._payload);
 
-  p = client_soc.build_packet(packet_type::REDUNDANCY_REQ, 0, 1, username.c_str());
-  client_soc.write_packet(&p);
-
-  response = client_soc.read_packet();
+  /*p = client_soc.build_packet(packet_type::REDUNDANCY_REQ, 0, 1, username.c_str());
+  client_soc.client_write_packet(&p);
+ 
+  response = client_soc.client_read_packet();
   if(response.type == REDUNDANCY_ACK)
   {
     printf("Redundancy available\n");
@@ -223,7 +224,15 @@ int main(int argc, char *argv[])
   {
     printf("response: %s\n", response._payload);
     printf("Redundancy unavailable\n");
-  }
+  }*/
+
+  pthread_t reconnection_listener_id = 0;
+  udp_listener_input_t reconnection_listener_input;
+  bool reconnected = false;
+  reconnection_listener_input.self = &client_soc;
+  reconnection_listener_input.username = username;
+  reconnection_listener_input.flag = &reconnected;
+  pthread_create(&reconnection_listener_id, NULL, ClientSocket::udp_listener, (void *)&reconnection_listener_input);
 
   SyncManager sync_manager(&client_soc);
   pthread_t sync_thread_id = 0;
@@ -241,17 +250,24 @@ int main(int argc, char *argv[])
   while (!input_manager.is_done())
   {
     usleep(100);
+    if(reconnected)
+    {
+      reconnected = false;
+      //restart packet listener
+      pthread_cancel(packet_listener_thread_id);
+      pthread_create(&packet_listener_thread_id, NULL, packet_listener, &in);
+    }
     if (input_manager.should_send())
     {
       packet p1 = input_manager.get_packet();
       // printf("type: %d\nlength: %d\nPayload: %s", p.type, p.length, p._payload);
-      client_soc.write_packet(&p1);
+      client_soc.client_write_packet(&p1);
     }
     if (sync_manager.should_send())
     {
       packet p2 = sync_manager.get_packet();
       // printf("type: %d\nlength: %d\nPayload: %s", p.type, p.length, p._payload);
-      client_soc.write_packet(&p2);
+      client_soc.client_write_packet(&p2);
     }
   }
 
@@ -260,6 +276,7 @@ int main(int argc, char *argv[])
   pthread_join(input_thread_id, NULL);
   pthread_join(sync_thread_id, NULL);
   pthread_join(packet_listener_thread_id, NULL);
+  pthread_join(reconnection_listener_id, NULL);
 
   return 0;
 }

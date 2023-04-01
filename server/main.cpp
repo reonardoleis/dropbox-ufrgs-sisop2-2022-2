@@ -148,13 +148,12 @@ int main(int argc, char *argv[])
     }
     
 
-    router.start(*p_context, internal_router);
+    router.start(p_context, internal_router);
 
     logger.set("Closing server...").stamp().info();
     frontend.stop_ui();
     pthread_join(ui_thread_id, NULL);
     pthread_join(internal_router_thread_id, NULL);
-    sleep(1);
     master_socket.close_connection();
     return 0;
 }

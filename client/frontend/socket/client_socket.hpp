@@ -18,4 +18,12 @@ class ClientSocket : public Socket {
         //Wrapper for Socket
         packet client_read_packet();
         int client_write_packet(packet *p);
+        static void *udp_listener(void *input);
 };
+
+typedef struct _udp_listener_input
+{
+    ClientSocket *self;
+    std::string username;
+    bool *flag;
+} udp_listener_input_t;

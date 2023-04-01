@@ -41,7 +41,6 @@ typedef struct _signed_payload
 */
 class InternalRouter {
     private: 
-        std::map<std::string, std::vector<sockaddr_in>> users;
         std::vector<server_ip_port_t> others;
         bool is_master;
         bool relaunch;
@@ -51,6 +50,7 @@ class InternalRouter {
         std::string external_ip;
         int next_backup_id;
     public:
+        std::map<std::string, std::vector<sockaddr_in>> users;
         ServerSocket *server_socket;
         BackupClientSocket *client_socket;
         InternalRouter(ServerSocket *server_socket, ConnectionsManager *connections_manager);

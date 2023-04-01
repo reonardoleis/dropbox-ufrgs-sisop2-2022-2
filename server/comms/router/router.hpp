@@ -12,7 +12,7 @@ class Router {
         // DeleteController delete_controller;
         // ListController list_controller;
         // SynchronizeController synchronize_controller;
-        int start(std::vector<sockaddr_in> context, InternalRouter *p_internal_router); // start handling the messages
+        int start(std::vector<sockaddr_in> *context, InternalRouter *p_internal_router); // start handling the messages
         static void * handle_connection(void *input);
 };
 

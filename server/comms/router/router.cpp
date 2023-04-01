@@ -11,7 +11,7 @@ Router::Router(ServerSocket *server_socket)
     this->server_socket = server_socket;
 }
 
-int Router::start(std::vector<sockaddr_in> context, InternalRouter *p_internal_router)
+int Router::start(std::vector<sockaddr_in> *context, InternalRouter *p_internal_router)
 {
     if (int err = this->server_socket->bind_and_listen() < 0)
     {
@@ -38,19 +38,22 @@ int Router::start(std::vector<sockaddr_in> context, InternalRouter *p_internal_r
     udp_sock.udp_client();
     //TODO: add ip:port in packet buffer
     packet p_hs;
-    for(sockaddr_in addr : context)
-    {
-        // get ip and port from addr
-        char ip[INET_ADDRSTRLEN];
-        uint16_t port;
- 
-        inet_ntop(AF_INET, addr.sin_addr, ip, sizeof (ip));
-        port = htons (sin.sin_port);
+    logger.set("Broadcasting to " + std::to_string(context->size()) + " user connections...").stamp().warning();
+    int i_con = 0;
+    char ip[INET_ADDRSTRLEN];
+    uint16_t port;
+    sockaddr_in s_addr = this->server_socket->serv_addr;
+    inet_ntop(AF_INET, (char *)&(s_addr.sin_addr), (char *)ip, sizeof(ip));
+    port = htons (s_addr.sin_port);
 
-        std::string port_str = std::to_string(port);
-        std::string ip_port = std::string(ip);
-        ip_port += ":" + std::string(port_str);
-        p_hs =  = udp_sock.build_packet(packet_type::SERVER_HANDSHAKE, 0, 1, ip_port.c_str());
+    std::string port_str = std::to_string(port);
+    std::string ip_port = std::string(ip);
+    ip_port += ":" + std::string(port_str);
+    for(sockaddr_in addr : *context)
+    {
+        logger.set("\t-> Broadcasting (" + std::to_string(++i_con) + "/" + std::to_string(context->size()) + ") user connections...").stamp().warning();
+        // get ip and port from addr
+        p_hs = udp_sock.build_packet(packet_type::SERVER_HANDSHAKE, 0, 1, ip_port.c_str());
         udp_sock.udp_send(&p_hs, addr);
     }
     udp_sock.close_connection();
@@ -74,7 +77,7 @@ int Router::start(std::vector<sockaddr_in> context, InternalRouter *p_internal_r
         {
             logger.stamp().set("Login request").info();
             std::string username = std::string(p._payload);
-
+            
             manager.lock.lock();
             int is_new_user = manager.add_user(username);
             if (manager.add_connection(username, slave_socket) < 0)
@@ -87,7 +90,13 @@ int Router::start(std::vector<sockaddr_in> context, InternalRouter *p_internal_r
                 break;
             }
             manager.lock.unlock();
-
+            char * buff = (char *)malloc(sizeof(sockaddr_in));
+            sockaddr_in is_addr = slave_socket.cli_addr;
+            is_addr.sin_port = ntohs(UDP_IN_PORT);
+            memcpy(buff, &is_addr, sizeof(sockaddr_in));
+            packet r = slave_socket.build_packet_sized(packet_type::LOGIN_REQ, 0, 1, sizeof(sockaddr_in), buff);
+            free(buff);
+            p_internal_router->broadcast_others(r, username);
             if (is_new_user < 0)
                 logger.set("new connection accepted for user " + username).stamp().info();
             else

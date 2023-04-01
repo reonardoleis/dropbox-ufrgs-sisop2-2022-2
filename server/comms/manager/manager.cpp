@@ -308,7 +308,6 @@ void *Manager::handle_connection(void *input)
             p_type = packet_type::LIST_ACCEPT_RESP;
             message = files;
             size = files.length();
-            logger.set("successfully listed files for user " + message).stamp().info();
         }
 
         packet p = connection->build_packet_sized(p_type, 0, 0, size + 1, message.c_str());
