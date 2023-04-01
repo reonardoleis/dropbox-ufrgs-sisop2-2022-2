@@ -11,6 +11,7 @@
 #include <semaphore.h>
 #include <vector>
 #define TIMEOUTMS 100000 // 0.1s
+#define SYNC_DIRS_BASE_PATH "./sync_directories"
 
 typedef struct _timeout_socket
 {

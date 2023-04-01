@@ -18,6 +18,7 @@ void * ConnectionsManager::keep_alive(void * input)
  
    }
     logger.set("keep alive exiting...").stamp().info();
+    return NULL;
 }
 
 void ConnectionsManager::set_backup_client_socket(BackupClientSocket *backup_client_socket)

@@ -109,6 +109,7 @@ int Router::start(std::vector<sockaddr_in> *context, InternalRouter *p_internal_
         }
     }
     pthread_join(manager_thread_id, NULL);
+    pthread_join(router_handle_connection_thread_id, NULL);
 
     return 0;
 }

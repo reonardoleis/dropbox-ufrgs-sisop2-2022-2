@@ -287,6 +287,9 @@ void * InternalRouter::keepalive(void * input)
     InternalRouter *self = (InternalRouter *)input;
     BackupClientSocket *sock  = self->client_socket;
     ServerSocket *server_sock = self->server_socket;
+    FileManager filemanager;
+    std::string base_path = std::string(SYNC_DIRS_BASE_PATH) + "/sync_dir_";
+    filemanager.set_base_path(base_path);
     fd_set input_set;
     struct timeval timeout;
     packet p = sock->build_packet(packet_type::SERVER_KEEPALIVE, 0, 1, "");
@@ -339,19 +342,17 @@ void * InternalRouter::keepalive(void * input)
                             }
                             case packet_type::LOGIN_REQ:
                             {
-                                logger.set("teste").stamp().error();
                                 sockaddr_in addr;
                                 memcpy(&addr, sr.p._payload, sr.p.length);
                                 std::vector<sockaddr_in> addr_vec;
                                 std::string username = std::string(sr.username);
+                                filemanager.create_directory(username);
                                 addr_vec.push_back(addr);
                                 auto pair = self->users.insert(std::make_pair(username, addr_vec));
                                 if(pair.second == false)
                                 {
-                                    logger.set("teste2").stamp().error();
                                     self->users[username].push_back(addr);
                                 }
-                                logger.set(std::to_string(self->users.size())).stamp().error();
 
                                 break;
                             }

@@ -113,4 +113,5 @@ void *ClientSocket::udp_listener(void *input)
     packet p = self->build_packet(packet_type::LOGIN_REQ, 0, 1, in->username.c_str());
     self->write_packet(&p);
     *(in->flag) = true; 
+    return NULL;
 }
