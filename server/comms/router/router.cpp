@@ -47,10 +47,10 @@ int Router::start(std::vector<sockaddr_in> context, InternalRouter *p_internal_r
         inet_ntop(AF_INET, addr.sin_addr, ip, sizeof (ip));
         port = htons (sin.sin_port);
 
-        char * port_str = std::to_string(port).c_str();
-        char * ip_port =   strcat(ip, ":");
-        ip_port = strcat(ip_port, port_str);
-        p_hs =  = udp_sock.build_packet(packet_type::SERVER_HANDSHAKE, 0, 1, ip_port);
+        std::string port_str = std::to_string(port);
+        std::string ip_port = std::string(ip);
+        ip_port += ":" + std::string(port_str);
+        p_hs =  = udp_sock.build_packet(packet_type::SERVER_HANDSHAKE, 0, 1, ip_port.c_str());
         udp_sock.udp_send(&p_hs, addr);
     }
     udp_sock.close_connection();
