@@ -3,6 +3,7 @@
 #include "../manager/manager.hpp"
 #include "../../../commons/packet.hpp"
 #include "../../../commons/ui/cli_types.hpp"
+#include <arpa/inet.h>
 #include "../../../commons/ui/ui_template.hpp"
 
 Router::Router(ServerSocket *server_socket)
@@ -36,9 +37,20 @@ int Router::start(std::vector<sockaddr_in> context, InternalRouter *p_internal_r
     Socket udp_sock;
     udp_sock.udp_client();
     //TODO: add ip:port in packet buffer
-    packet p_hs = udp_sock.build_packet(packet_type::SERVER_HANDSHAKE, 0, 1, "");
+    packet p_hs;
     for(sockaddr_in addr : context)
     {
+        // get ip and port from addr
+        char ip[INET_ADDRSTRLEN];
+        uint16_t port;
+ 
+        inet_ntop(AF_INET, addr.sin_addr, ip, sizeof (ip));
+        port = htons (sin.sin_port);
+
+        char * port_str = std::to_string(port).c_str();
+        char * ip_port =   strcat(ip, ":");
+        ip_port = strcat(ip_port, port_str);
+        p_hs =  = udp_sock.build_packet(packet_type::SERVER_HANDSHAKE, 0, 1, ip_port);
         udp_sock.udp_send(&p_hs, addr);
     }
     udp_sock.close_connection();
