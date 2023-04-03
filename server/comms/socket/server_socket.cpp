@@ -87,9 +87,9 @@ ServerSocket ServerSocket::accept_connection()
 {
     cli_logger logger = cli_logger(frontend.get_log_stream());
     logger.set("waiting for connection...").stamp().info();
-
+    this->cli_addr.sin_family = AF_INET;
     this->clilen = sizeof(struct sockaddr_in);
-    int newsockfd = accept(this->sockfd, (struct sockaddr *)&cli_addr, &(this->clilen));
+    int newsockfd = accept(this->sockfd, (struct sockaddr *)&(this->cli_addr), &(this->clilen));
     if (newsockfd < 0)
     {
         logger.set("Failed to accept connection").stamp().error();
@@ -108,4 +108,3 @@ void ServerSocket::error_handler(int signal)
     logger.set("Exiting due to error: " + signal).stamp().error();
     exit(signal);
 }
-
