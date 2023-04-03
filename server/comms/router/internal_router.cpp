@@ -139,8 +139,9 @@ void * InternalRouter::start(void *input)
         self->client_socket->reset_connection(ipport.server_ip.c_str(), ipport.server_port + 50);
         std::string ip_port_str = self->get_ip() + std::string(":") + std::to_string(self->server_socket->port);
         packet my_vote = self->client_socket->build_packet(packet_type::VOTE, 0, self->get_id(), ip_port_str.c_str());
-        ServerSocket *my_adjacentsocket = new ServerSocket(8080, 2);
-        try{ 
+        ServerSocket *my_adjacentsocket = new ServerSocket(8080, 2); 
+	usleep((self->get_id() + 1)*10000);
+	try{ 
             self->client_socket->connect_to_server();
             *my_adjacentsocket = self->server_socket->accept_connection();
         }
@@ -177,7 +178,7 @@ void * InternalRouter::start(void *input)
                 else if(p.seqn == 0)
                 {
                     if (self->get_id() == id_int) {
-                        logger.stamp().set("I'm the master >:)").info();
+                        logger.stamp().set(std::to_string(self->get_id()) + " | " +  std::to_string(id_int) + "I'm the master >:)").info();
                         self->set_is_master(true);
                         p.seqn = 1;
                         self->client_socket->write_packet(&p);
@@ -185,6 +186,7 @@ void * InternalRouter::start(void *input)
                         voting = false;
                         relaunch = true;
                     } else if (self->get_id() < id_int) {
+                        logger.stamp().set("I want to be the master").info();
                         logger.stamp().set("I want to be the master").info();
                         self->client_socket->write_packet(&my_vote);
                     } else {
@@ -235,8 +237,16 @@ void *InternalRouter::handle_connection(void *input)
         {
             ServerSocket *ssock = (ServerSocket *)&(in.socket);
             sockaddr_in addr = ssock->cli_addr;
-            in.server_ip = inet_ntoa(addr.sin_addr);
-            in.server_port = atoi(p._payload);
+            char ip2[INET_ADDRSTRLEN];
+	    inet_ntop(AF_INET, (char *)&(addr.sin_addr), (char *)ip2, sizeof(ip2));
+ 	    std::string ip_port_str = p._payload;
+            std::string ip = ip_port_str.substr(0, ip_port_str.find(":"));
+            std::string port_str = ip_port_str.substr(ip_port_str.find(":") + 1, ip_port_str.length());
+            int port = std::stoi(port_str);
+            //in.server_ip = ip;
+            //in.server_port = atoi(p._payload);
+            in.server_ip = ip;
+            in.server_port = port;
             logger.stamp().set(std::string("Server join request from ") + std::string(others->back().server_ip + ":" + std::to_string(others->back().server_port))).info();
             if(others->size() > 1)
             {
