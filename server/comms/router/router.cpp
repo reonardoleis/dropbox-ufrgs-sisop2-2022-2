@@ -76,7 +76,9 @@ int Router::start(std::vector<sockaddr_in> *context, InternalRouter *p_internal_
         case packet_type::LOGIN_REQ:
         {
             logger.stamp().set("Login request").info();
-            std::string username = std::string(p._payload);
+	    std::string ip_port_str = p._payload;
+            std::string username = ip_port_str.substr(0, ip_port_str.find(":"));
+            std::string ip = ip_port_str.substr(ip_port_str.find(":") + 1, ip_port_str.length());
             
             manager.lock.lock();
             int is_new_user = manager.add_user(username);
@@ -92,6 +94,7 @@ int Router::start(std::vector<sockaddr_in> *context, InternalRouter *p_internal_
             manager.lock.unlock();
             char * buff = (char *)malloc(sizeof(sockaddr_in));
             sockaddr_in is_addr = slave_socket.cli_addr;
+	    inet_aton(ip.c_str(), &(is_addr.sin_addr));
             is_addr.sin_port = ntohs(UDP_IN_PORT);
             memcpy(buff, &is_addr, sizeof(sockaddr_in));
             packet r = slave_socket.build_packet_sized(packet_type::LOGIN_REQ, 0, 1, sizeof(sockaddr_in), buff);
