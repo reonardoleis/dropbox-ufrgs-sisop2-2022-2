@@ -15,6 +15,7 @@ int main(int argc, char *argv[])
     int port = 8080;
     char *role = "";
     std::string master_ip;
+    std::string my_ip;
     int master_port = 0;
 
     if (argc < 3)
@@ -32,11 +33,12 @@ int main(int argc, char *argv[])
             printf("Usage: ./server <port> <master|backup> [master_ip] [master_port]");
             return 1;
         }
+	my_ip = argv[3];
     }
 
-    if (argc > 3)
+    if (argc > 4)
     {
-        if (argc != 5)
+        if (argc != 6)
         {
             printf("Usage: ./server <port> <master|backup> <master_ip> <master_port>");
             return 1;
@@ -44,6 +46,7 @@ int main(int argc, char *argv[])
 
         master_ip = argv[3];
         master_port = atoi(argv[4]);
+	my_ip = argv[5];
     }
 
     // print all the arguments (port, role, etc)
@@ -93,7 +96,7 @@ int main(int argc, char *argv[])
         }
         logger.set("Connected to master...").stamp().info();
         packet *p;
-        packet p1 = client_soc->build_packet(packet_type::JOIN_REQ, 0, 1, std::to_string(port).c_str());
+        packet p1 = client_soc->build_packet(packet_type::JOIN_REQ, 0, 1, std::string(my_ip + ":" + std::to_string(port)).c_str());
         p = &p1;
         client_soc->write_packet(p);
         
@@ -122,10 +125,10 @@ int main(int argc, char *argv[])
         }
         if(p->type == packet_type::YOUR_ID_RESP)
         {
-            logger.stamp().set("Received your id response").info();
             std::string ip = p->_payload;
             int id_int = p->total_size;
-            internal_router->set_id(id_int);
+            logger.stamp().set("Received your id response " + std::to_string(id_int)).info();
+	    internal_router->set_id(id_int);
             internal_router->set_ip(ip.c_str());
         }
         internal_router_thread_id = 0;
