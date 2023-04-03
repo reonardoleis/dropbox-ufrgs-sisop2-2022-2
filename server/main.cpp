@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     cli_logger logger = cli_logger(frontend.get_log_stream());
     int port = 8080;
     char *role = "";
-    std::string master_ip = "";
+    std::string master_ip;
     int master_port = 0;
 
     if (argc < 3)
