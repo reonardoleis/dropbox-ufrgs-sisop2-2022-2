@@ -20,9 +20,9 @@ BackupClientSocket::BackupClientSocket(const char* server_address, int server_po
 
     this->port = server_port;
     
-    char * unconst_server_address = strdup(server_address);
-    strcat(unconst_server_address, "\0");
-    this->server = gethostbyname(unconst_server_address);
+    //char * unconst_server_address = strdup(server_address);
+    //strcat(unconst_server_address, "\0");
+    this->server = gethostbyname(server_address);
     this->serv_addr.sin_family = AF_INET;     
     this->serv_addr.sin_port = htons(port);    
 	this->serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
@@ -48,9 +48,9 @@ void BackupClientSocket::reset_connection(const char* server_address, int server
 
     this->port = server_port;
    
-    char * unconst_server_address = strdup(server_address);
-    strcat(unconst_server_address, "\0");
-    this->server = gethostbyname(unconst_server_address);
+    //char * unconst_server_address = strdup(server_address);
+    //strcat(unconst_server_address, "\0");
+    this->server = gethostbyname(server_address);
     this->serv_addr.sin_family = AF_INET;     
     this->serv_addr.sin_port = htons(port);    
 	this->serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
@@ -60,12 +60,10 @@ void BackupClientSocket::reset_connection(const char* server_address, int server
 
 int BackupClientSocket::connect_to_server()
 {
-    int err = connect(this->sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr));
+    int err = connect(this->sockfd,(struct sockaddr *) &serv_addr, sizeof(serv_addr));
     if (err < 0) {
         throw SocketError::CONNECT_ERROR;
     }
-
-    printf("Connected to server\n");
 
     return 0;
 }

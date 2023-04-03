@@ -78,13 +78,20 @@ int main(int argc, char *argv[])
     while(strcmp(role, "backup") == 0)
     {
         logger.set("Connecting to master...").stamp().info();
-        int err = client_soc->connect_to_server();
-        if (err != 0)
-        {
-            logger.set("Failed to connect to master").stamp().error();
-            return 1;
+        try{
+            int err = client_soc->connect_to_server();
+            if (err != 0)
+            {
+                logger.set("Failed to connect to master").stamp().error();
+                return 1;
+            }
         }
-
+        catch(SocketError err)
+        {
+            logger.set("Failed to connect to server with error [" + std::string(strerror(err)) + "]").stamp().error();
+            usleep(200);
+            exit(errno);
+        }
         logger.set("Connected to master...").stamp().info();
         packet *p;
         packet p1 = client_soc->build_packet(packet_type::JOIN_REQ, 0, 1, std::to_string(port).c_str());

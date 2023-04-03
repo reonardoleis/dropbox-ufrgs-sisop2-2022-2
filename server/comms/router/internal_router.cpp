@@ -309,8 +309,8 @@ void * InternalRouter::keepalive(void * input)
             {
                 half_timeout = false;
 
+                //logger.set(std::to_string(n)).stamp().error();
                 packet r = sock->read_packet();
-                //logger.set(std::to_string(p.type)).stamp().error();
                 switch(r.type)
                 {   case packet_type::SIGNED_PACKET:
                     {
@@ -392,8 +392,8 @@ void * InternalRouter::keepalive(void * input)
                     else
                     {
                         //logger.set("Timeout, trying to reach host").stamp().warning();
-                        sock->write_packet(&p);
                         half_timeout = true;
+                        sock->write_packet(&p);
                     }
                 }
                 catch(SocketError err)
@@ -404,8 +404,9 @@ void * InternalRouter::keepalive(void * input)
             }
         }
         catch(SocketError err){
-            logger.set("Error comunicationg with master server").stamp().error();
+            logger.set("Error comunicating with master server " + std::to_string(err) + " [" + std::string(strerror(errno)) + "]").stamp().error();
             usleep(100);
+            timeout_b = true;
             continue;
         }
     }
