@@ -56,7 +56,6 @@ class InternalRouter {
         std::map<std::string, std::vector<sockaddr_in>> users;
         ServerSocket *server_socket;
         BackupClientSocket *client_socket;
-        InternalRouter(ServerSocket *server_socket, ConnectionsManager *connections_manager);
         InternalRouter(ServerSocket *server_socket);
         InternalRouter(ServerSocket *server_socket, BackupClientSocket *client_socket);
         void start_vote();
@@ -79,5 +78,4 @@ class InternalRouter {
         server_ip_port_t get_adjacent();
         void set_relaunch();
         bool should_relaunch();
-        ConnectionsManager *connections_manager;
 };

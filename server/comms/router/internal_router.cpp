@@ -11,14 +11,6 @@ InternalRouter::InternalRouter(ServerSocket *server_socket)
     this->relaunch = false;
 }
 
-InternalRouter::InternalRouter(ServerSocket *server_socket, ConnectionsManager *connections_manager)
-{
-    this->server_socket = server_socket;
-    //this->router = new Router(server_socket);
-    this->connections_manager = connections_manager;
-    this->next_backup_id = 0;
-    this->relaunch = false;
-}
 
 InternalRouter::InternalRouter(ServerSocket *server_socket, BackupClientSocket *client_socket)
 {
