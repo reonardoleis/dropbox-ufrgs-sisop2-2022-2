@@ -178,14 +178,14 @@ void *packet_listener(void *arg)
 
 int main(int argc, char *argv[])
 {
-  if (argc < 4)
+  if (argc < 5)
   {
     printf("Wrong usage: expected ./myClient <username> [<server_name_or_ip> <port>, ...]");
     return -1;
   }
 
   int port;
-  std::string username;
+  std::string username, my_ip;
   std::string server_address_str;
   std::string command, arg;
   struct passwd *pw = getpwuid(getuid());
@@ -197,6 +197,7 @@ int main(int argc, char *argv[])
   username = argv[1];
   server_address_str = argv[2];
   port = atoi(argv[3]);
+  my_ip = argv[4];
 
   file_manager.set_base_path(base_path);
 
@@ -204,7 +205,7 @@ int main(int argc, char *argv[])
   client_soc.connect_to_server();
 
   //
-  packet p = client_soc.build_packet(packet_type::LOGIN_REQ, 0, 1, username.c_str());
+  packet p = client_soc.build_packet(packet_type::LOGIN_REQ, 0, 1, std::string(username + ":" + my_ip).c_str());
   client_soc.client_write_packet(&p);
 
 
@@ -280,4 +281,3 @@ int main(int argc, char *argv[])
 
   return 0;
 }
-
