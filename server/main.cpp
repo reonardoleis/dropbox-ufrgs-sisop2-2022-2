@@ -5,7 +5,6 @@
 #include "../commons/ui/cli_types.hpp"
 #include "../commons/ui/ui_template.hpp"
 #include "./comms/socket/backup_client_socket.hpp"
-#include "./comms/connections_manager/connections_manager.hpp"
 #define MASTER_SOCKET_QUEUE_SIZE 5
 
 using namespace std;
