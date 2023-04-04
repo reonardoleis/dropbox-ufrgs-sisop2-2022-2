@@ -3,7 +3,7 @@ CLIENT_FILES := $(shell find ./client ./commons -type f -iregex ".*\.cpp")
 
 build-server:
 	g++ -g $(SERVER_FILES) -o ./server/bin/server -lpthread -std=c++0x
-
+ 
 run-server:
 	./server/bin/server
 
